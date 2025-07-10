@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>随机多源视频播放 - Apple风格UI</title>
+  <style>
+    /* ===== 基础样式与Apple风格布局 ===== */
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+        Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+      background: #f9f9fb;
+      color: #333;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      background: #fff;
+      max-width: 95vw;
+      width: 480px;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      padding: 20px 25px 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0 10px;
+    }
+
+    /* 下拉选择接口 */
+    #apiSelect {
+      width: 100%;
+      margin-bottom: 12px;
+      padding: 8px;
+      border-radius: 12px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+      background: #f9f9f9;
+    }
+
+    /* 视频标题样式 */
+    h2#title {
+      font-weight: 600;
+      font-size: 1.4rem;
+      margin: 10px 0 15px;
+      color: #111;
+      text-align: center;
+      word-break: break-word;
+    }
+
+    /* 视频封面图样式 */
+    #poster {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border-radius: 14px;
+      object-fit: cover;
+      margin-bottom: 18px;
+      transition: opacity 0.3s ease;
+    }
+
+    /* 播放源按钮容器 */
+    #sourceList {
+      width: 100%;
+      margin-bottom: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+    }
+
+    /* 播放源按钮样式 */
+    #sourceList button.source-btn {
+      padding: 8px 15px;
+      border-radius: 14px;
+      border: 1.5px solid #ddd;
+      background: #f6f6f8;
+      font-weight: 600;
+      cursor: pointer;
+      flex: 1 1 auto;
+      min-width: 80px;
+      text-align: center;
+      user-select: none;
+      transition: all 0.3s ease;
+    }
+
+    #sourceList button.source-btn:hover {
+      background: #e6e6eb;
+      border-color: #aaa;
+    }
+
+    /* 当前播放源按钮高亮 */
+    #sourceList button.active {
+      background: #007aff;
+      border-color: #007aff;
+      color: white;
+      box-shadow: 0 3px 8px rgba(0, 122, 255, 0.4);
+    }
+
+    /* 播放器 video */
+    video#player {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border-radius: 14px;
+      background: #000;
+      margin-bottom: 20px;
+      box-shadow: 0 6px 22px rgba(0, 0, 0, 0.12);
+      outline: none;
+    }
+
+    /* 随机播放按钮 */
+    #randomBtn {
+      width: 100%;
+      padding: 12px 0;
+      font-size: 1.1rem;
+      font-weight: 700;
+      background-color: #007aff;
+      color: white;
+      border: none;
+      border-radius: 18px;
+      cursor: pointer;
+      user-select: none;
+      box-shadow: 0 6px 14px rgba(0, 122, 255, 0.5);
+      transition: background-color 0.3s ease;
+    }
+
+    #randomBtn:hover {
+      background-color: #005ecb;
+    }
+
+    #randomBtn:active {
+      background-color: #004bb5;
+    }
+
+    /* 移动端适配 */
+    @media (max-width: 480px) {
+      body {
+        padding: 15px;
+      }
+
+      .container {
+        padding: 15px 18px 25px;
+      }
+
+      h2#title {
+        font-size: 1.2rem;
+      }
+
+      #sourceList button.source-btn {
+        min-width: 70px;
+        font-size: 0.95rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <select id="apiSelect" title="选择API接口"></select>
+    <h2 id="title">加载中...</h2>
+    <img id="poster" src="" alt="视频封面" />
+    <div id="sourceList">播放源：</div>
+    <!-- 用 video 标签替代 iframe -->
+    <video id="player" controls playsinline webkit-playsinline></video>
+    <button id="randomBtn" title="点击随机播放新视频">随机播放 🎲</button>
+  </div>
+
+  <!-- 引入HLS.js用于播放m3u8格式 -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+  <script>
+    // ===== DOM 元素引用 =====
+    const titleEl = document.getElementById('title');
+    const posterEl = document.getElementById('poster');
+    const playerEl = document.getElementById('player');
+    const sourceListEl = document.getElementById('sourceList');
+    const randomBtn = document.getElementById('randomBtn');
+    const apiSelect = document.getElementById('apiSelect');
+
+    // ===== 接口地址 =====
+    const ADD_INVALID_ID_API = '/api/add_invalid_id.php';
+    const GET_INVALID_IDS_API = '/api/get_invalid_ids.php';
+
+    // ===== 状态变量 =====
+    let currentApiUrl = '';
+    let currentApiName = '';
+    let parseBaseUrl = '';
+    let maxIdGlobal = 100000;
+    let invalidEntries = []; // 记录无效ID [{api_name, id}]
+    let hls = null; // HLS.js实例
+
+    // ===== 初始化接口列表 =====
+    async function fetchApiList() {
+      try {
+        const res = await fetch('/api/list_apis.php');
+        const json = await res.json();
+        parseBaseUrl = json.parse_url;
+
+        apiSelect.innerHTML = '';
+        json.apis.forEach(api => {
+          const opt = document.createElement('option');
+          opt.value = api.api_url;
+          opt.text = api.name;
+          apiSelect.appendChild(opt);
+        });
+
+        currentApiUrl = apiSelect.value;
+        currentApiName = apiSelect.options[apiSelect.selectedIndex].text;
+
+        apiSelect.onchange = () => {
+          currentApiUrl = apiSelect.value;
+          currentApiName = apiSelect.options[apiSelect.selectedIndex].text;
+          initMaxIdAndLoad();
+        };
+      } catch (e) {
+        console.error('获取API列表失败', e);
+        titleEl.innerText = '加载API列表失败';
+      }
+    }
+
+    // ===== 获取最大ID（total） =====
+    async function getMaxId() {
+      try {
+        const url = `${currentApiUrl}&page=1&limit=1`;
+        const res = await fetch(`/api/proxy.php?url=${encodeURIComponent(url)}`);
+        const json = await res.json();
+        if (json.code === 1 && json.total) return json.total;
+      } catch (e) {
+        console.error('获取最大ID失败', e);
+      }
+      return 100000;
+    }
+
+    // ===== 解析播放地址字符串为数组 =====
+    function parsePlayUrls(rawStr) {
+      const sources = rawStr.split('$$$').filter(Boolean);
+      return sources.map(src => {
+        const parts = src.split('$');
+        return { label: parts[0], url: parts[1] };
+      }).filter(s => s.url);
+    }
+
+    // ===== 设置按钮激活样式 =====
+    function setActiveButton(btn) {
+      document.querySelectorAll('.source-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    // ===== 判断是否为无效ID =====
+    function isInvalid(apiName, id) {
+      return invalidEntries.some(entry => entry.api_name === apiName && entry.id === id);
+    }
+
+    // ===== 随机生成有效ID =====
+    function getRandomValidId(maxId, apiName, maxAttempts = 20) {
+      for (let i = 0; i < maxAttempts; i++) {
+        const id = Math.floor(Math.random() * maxId) + 1;
+        if (!isInvalid(apiName, id)) return id;
+      }
+      return Math.floor(Math.random() * maxId) + 1;
+    }
+
+    // ===== 记录无效ID到服务器 =====
+    async function addInvalidId(id, apiName) {
+      try {
+        await fetch(ADD_INVALID_ID_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, api_name: apiName }),
+        });
+      } catch (e) {
+        console.error('添加无效ID失败', e);
+      }
+    }
+
+    // ===== 加载无效ID列表 =====
+    async function loadInvalidIds() {
+      try {
+        const res = await fetch(GET_INVALID_IDS_API);
+        const json = await res.json();
+        if (json.code === 1 && Array.isArray(json.invalid_entries)) {
+          invalidEntries = json.invalid_entries;
+        }
+      } catch (e) {
+        console.warn('加载无效ID失败', e);
+      }
+    }
+
+    // ===== 加载视频数据并展示播放源 =====
+    async function loadVideoById(id) {
+      titleEl.innerText = '加载中...';
+      posterEl.src = '';
+      sourceListEl.innerHTML = '';
+
+      // 停止上一个播放
+      if (hls) {
+        hls.destroy();
+        hls = null;
+      }
+      playerEl.pause();
+      playerEl.removeAttribute('src');
+      playerEl.load();
+
+      try {
+        const url = currentApiUrl + '&ids=' + id;
+        const res = await fetch(`/api/proxy.php?url=${encodeURIComponent(url)}`);
+        const json = await res.json();
+
+        if (json.code !== 1 || !json.list || json.list.length === 0) {
+          titleEl.innerText = '未找到视频，重试中...';
+          await addInvalidId(id, currentApiName);
+          setTimeout(() => loadVideoById(getRandomValidId(maxIdGlobal, currentApiName)), 1000);
+          return;
+        }
+
+        const data = json.list[0];
+        titleEl.innerText = data.vod_name || '无标题';
+        posterEl.src = data.vod_pic || '';
+
+        const sources = parsePlayUrls(data.vod_play_url || '');
+        if (sources.length === 0) {
+          titleEl.innerText = '无可用播放源';
+          return;
+        }
+
+        // 清空旧按钮并创建新按钮
+        sourceListEl.innerHTML = '';
+        sources.forEach((source, i) => {
+          const btn = document.createElement('button');
+          btn.className = 'source-btn';
+          btn.innerText = source.label || `播放源${i + 1}`;
+          btn.onclick = () => {
+            setActiveButton(btn);
+            playSourceUrl(source.url);
+          };
+          sourceListEl.appendChild(btn);
+        });
+
+        // 自动点击第一个按钮播放
+        const firstBtn = sourceListEl.querySelector('button');
+        if (firstBtn) firstBtn.click();
+      } catch (err) {
+        console.error(err);
+        titleEl.innerText = '加载失败，重试中...';
+        await addInvalidId(id, currentApiName);
+        setTimeout(() => loadVideoById(getRandomValidId(maxIdGlobal, currentApiName)), 1000);
+      }
+    }
+
+    // ===== 播放指定URL的函数 =====
+    function playSourceUrl(url) {
+      // 停止之前播放
+      if (hls) {
+        hls.destroy();
+        hls = null;
+      }
+      playerEl.pause();
+      playerEl.removeAttribute('src');
+      playerEl.load();
+
+      // 判断是否m3u8，用HLS.js播放
+      if (url.endsWith('.m3u8')) {
+        if (Hls.isSupported()) {
+          hls = new Hls();
+          hls.loadSource(url);
+          hls.attachMedia(playerEl);
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            playerEl.play();
+          });
+        } else if (playerEl.canPlayType('application/vnd.apple.mpegurl')) {
+          // Safari 原生支持
+          playerEl.src = url;
+          playerEl.play();
+        } else {
+          alert('您的浏览器不支持播放此视频格式');
+        }
+      } else {
+        // 普通视频地址直接播放
+        playerEl.src = url;
+        playerEl.play();
+      }
+    }
+
+    // ===== 初始化最大ID并加载随机视频 =====
+    async function initMaxIdAndLoad() {
+      maxIdGlobal = await getMaxId();
+      await loadInvalidIds();
+      loadVideoById(getRandomValidId(maxIdGlobal, currentApiName));
+    }
+
+    // ===== 页面初始化 =====
+    async function init() {
+      await fetchApiList();
+      await initMaxIdAndLoad();
+    }
+
+    window.onload = init;
+
+    // 点击按钮重新加载随机视频
+    randomBtn.onclick = () => loadVideoById(getRandomValidId(maxIdGlobal, currentApiName));
+
+    // ===== 监听视频播放完毕，自动播放下一个随机视频 =====
+    playerEl.onended = () => {
+      loadVideoById(getRandomValidId(maxIdGlobal, currentApiName));
+    };
+  </script>
+</body>
+
+</html>
