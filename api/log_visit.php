@@ -1,20 +1,19 @@
 <?php
 // 文件路径：api/log_visit.php
 header('Content-Type: application/json');
-
-// 设置为北京时间
-date_default_timezone_set('Asia/Shanghai');
+date_default_timezone_set('Asia/Shanghai'); // 设置为北京时间
 
 $data = json_decode(file_get_contents('php://input'), true);
 
-// 验证字段
+// 参数验证（vod_id 替代原 ids）
 if (
   !$data || 
   !isset($data['ip']) || 
   !isset($data['device']) || 
   !isset($data['time']) || 
   !isset($data['api_name']) || 
-  !isset($data['vod_name'])
+  !isset($data['vod_name']) ||
+  !isset($data['vod_id'])       // 改这里
 ) {
   echo json_encode(['code' => 0, 'msg' => '缺少参数']);
   exit;
@@ -26,11 +25,15 @@ $device = $data['device'];
 $time = $data['time'];
 $api_name = $data['api_name'];
 $vod_name = $data['vod_name'];
+$vod_id = $data['vod_id'];    // 改这里
 
 // 解析并转换为北京时间
 $datetime = strtotime($time);
-$dateStr = date('Y-m-d', $datetime);   // 日期：2025-07-12
-$timeStr = date('H:i:s', $datetime);   // 时间：13:47:59
+if ($datetime === false) {
+    $datetime = time();
+}
+$dateStr = date('Y-m-d', $datetime);
+$timeStr = date('H:i:s', $datetime);
 
 // 使用 ip-api 获取中文物理地址
 function getChineseLocation($ip) {
@@ -53,16 +56,17 @@ function getChineseLocation($ip) {
 
 $geo = getChineseLocation($ip);
 
-// 记录日志到 visit_log.txt
+// 写入日志文件，包含 vod_id
 $log = sprintf(
-  "%s | %s | %s | %s | %s | %s | %s\n",
+  "%s | %s | %s | %s | %s | %s | %s | %s\n",
   $dateStr,
   $timeStr,
   $ip,
   $geo,
   $device,
   $api_name,
-  $vod_name
+  $vod_name,
+  $vod_id
 );
 
 file_put_contents(__DIR__ . '/visit_log.txt', $log, FILE_APPEND | LOCK_EX);
