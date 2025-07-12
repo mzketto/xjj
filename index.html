@@ -167,16 +167,13 @@
     <h2 id="title">加载中...</h2>
     <img id="poster" src="" alt="视频封面" />
     <div id="sourceList">播放源：</div>
-    <!-- 用 video 标签替代 iframe -->
     <video id="player" controls playsinline webkit-playsinline></video>
     <button id="randomBtn" title="点击随机播放新视频">随机播放 🎲</button>
   </div>
 
-  <!-- 引入HLS.js用于播放m3u8格式 -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
   <script>
-    // ===== DOM 元素引用 =====
     const titleEl = document.getElementById('title');
     const posterEl = document.getElementById('poster');
     const playerEl = document.getElementById('player');
@@ -184,19 +181,16 @@
     const randomBtn = document.getElementById('randomBtn');
     const apiSelect = document.getElementById('apiSelect');
 
-    // ===== 接口地址 =====
     const ADD_INVALID_ID_API = '/api/add_invalid_id.php';
     const GET_INVALID_IDS_API = '/api/get_invalid_ids.php';
 
-    // ===== 状态变量 =====
     let currentApiUrl = '';
     let currentApiName = '';
     let parseBaseUrl = '';
     let maxIdGlobal = 100000;
-    let invalidEntries = []; // 记录无效ID [{api_name, id}]
-    let hls = null; // HLS.js实例
+    let invalidEntries = [];
+    let hls = null;
 
-    // ===== 初始化接口列表 =====
     async function fetchApiList() {
       try {
         const res = await fetch('/api/list_apis.php');
@@ -225,7 +219,6 @@
       }
     }
 
-    // ===== 获取最大ID（total） =====
     async function getMaxId() {
       try {
         const url = `${currentApiUrl}&page=1&limit=1`;
@@ -238,7 +231,6 @@
       return 100000;
     }
 
-    // ===== 解析播放地址字符串为数组 =====
     function parsePlayUrls(rawStr) {
       const sources = rawStr.split('$$$').filter(Boolean);
       return sources.map(src => {
@@ -247,18 +239,15 @@
       }).filter(s => s.url);
     }
 
-    // ===== 设置按钮激活样式 =====
     function setActiveButton(btn) {
       document.querySelectorAll('.source-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
     }
 
-    // ===== 判断是否为无效ID =====
     function isInvalid(apiName, id) {
       return invalidEntries.some(entry => entry.api_name === apiName && entry.id === id);
     }
 
-    // ===== 随机生成有效ID =====
     function getRandomValidId(maxId, apiName, maxAttempts = 20) {
       for (let i = 0; i < maxAttempts; i++) {
         const id = Math.floor(Math.random() * maxId) + 1;
@@ -267,7 +256,6 @@
       return Math.floor(Math.random() * maxId) + 1;
     }
 
-    // ===== 记录无效ID到服务器 =====
     async function addInvalidId(id, apiName) {
       try {
         await fetch(ADD_INVALID_ID_API, {
@@ -280,7 +268,6 @@
       }
     }
 
-    // ===== 加载无效ID列表 =====
     async function loadInvalidIds() {
       try {
         const res = await fetch(GET_INVALID_IDS_API);
@@ -293,13 +280,11 @@
       }
     }
 
-    // ===== 加载视频数据并展示播放源 =====
     async function loadVideoById(id) {
       titleEl.innerText = '加载中...';
       posterEl.src = '';
       sourceListEl.innerHTML = '';
 
-      // 停止上一个播放
       if (hls) {
         hls.destroy();
         hls = null;
@@ -323,6 +308,8 @@
         const data = json.list[0];
         titleEl.innerText = data.vod_name || '无标题';
         posterEl.src = data.vod_pic || '';
+        logVisitorInfo(currentApiName, data.vod_name || '无标题');
+
 
         const sources = parsePlayUrls(data.vod_play_url || '');
         if (sources.length === 0) {
@@ -330,7 +317,6 @@
           return;
         }
 
-        // 清空旧按钮并创建新按钮
         sourceListEl.innerHTML = '';
         sources.forEach((source, i) => {
           const btn = document.createElement('button');
@@ -338,25 +324,27 @@
           btn.innerText = source.label || `播放源${i + 1}`;
           btn.onclick = () => {
             setActiveButton(btn);
-            playSourceUrl(source.url);
+            if (source.url.endsWith('.m3u8')) {
+              playSourceUrl(source.url);
+            } else {
+              window.open(source.url, '_blank');
+            }
           };
           sourceListEl.appendChild(btn);
         });
 
-        // 自动点击第一个按钮播放
         const firstBtn = sourceListEl.querySelector('button');
         if (firstBtn) firstBtn.click();
+
       } catch (err) {
         console.error(err);
-        titleEl.innerText = '加载失败，重试中...';
+        titleEl.innerText = '正在为您努力加载中，请稍等...';
         await addInvalidId(id, currentApiName);
         setTimeout(() => loadVideoById(getRandomValidId(maxIdGlobal, currentApiName)), 1000);
       }
     }
 
-    // ===== 播放指定URL的函数 =====
     function playSourceUrl(url) {
-      // 停止之前播放
       if (hls) {
         hls.destroy();
         hls = null;
@@ -365,7 +353,6 @@
       playerEl.removeAttribute('src');
       playerEl.load();
 
-      // 判断是否m3u8，用HLS.js播放
       if (url.endsWith('.m3u8')) {
         if (Hls.isSupported()) {
           hls = new Hls();
@@ -375,27 +362,23 @@
             playerEl.play();
           });
         } else if (playerEl.canPlayType('application/vnd.apple.mpegurl')) {
-          // Safari 原生支持
           playerEl.src = url;
           playerEl.play();
         } else {
           alert('您的浏览器不支持播放此视频格式');
         }
       } else {
-        // 普通视频地址直接播放
         playerEl.src = url;
-        playerEl.play();
+        // 非m3u8不自动播放，等待用户点击播放
       }
     }
 
-    // ===== 初始化最大ID并加载随机视频 =====
     async function initMaxIdAndLoad() {
       maxIdGlobal = await getMaxId();
       await loadInvalidIds();
       loadVideoById(getRandomValidId(maxIdGlobal, currentApiName));
     }
 
-    // ===== 页面初始化 =====
     async function init() {
       await fetchApiList();
       await initMaxIdAndLoad();
@@ -403,14 +386,49 @@
 
     window.onload = init;
 
-    // 点击按钮重新加载随机视频
     randomBtn.onclick = () => loadVideoById(getRandomValidId(maxIdGlobal, currentApiName));
 
-    // ===== 监听视频播放完毕，自动播放下一个随机视频 =====
     playerEl.onended = () => {
       loadVideoById(getRandomValidId(maxIdGlobal, currentApiName));
     };
   </script>
+  <script>
+  async function logVisitorInfo(apiName, vodName) {
+    try {
+      const ipRes = await fetch('https://api.ipify.org?format=json');
+      const ipData = await ipRes.json();
+      const ip = ipData.ip;
+
+      let geo = '未知';
+      try {
+        const geoRes = await fetch(`https://ipapi.co/${ip}/json/`);
+        const geoJson = await geoRes.json();
+        geo = `${geoJson.city || ''}, ${geoJson.region || ''}, ${geoJson.country_name || ''}`;
+      } catch (e) {
+        console.warn('地理信息获取失败', e);
+      }
+
+      const ua = navigator.userAgent;
+      const device = /mobile/i.test(ua) ? '手机' : '电脑';
+      const time = new Date().toISOString();
+
+      await fetch('/api/log_visit.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ip,
+          geo,
+          device,
+          time,
+          api_name: apiName,
+          vod_name: vodName
+        })
+      });
+    } catch (e) {
+      console.warn('访客信息记录失败', e);
+    }
+  }
+</script>
 </body>
 
 </html>
