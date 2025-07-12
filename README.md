@@ -24,7 +24,9 @@
 - 可访问外部 Maccms JSON API
 
 
-上传以后  域名/install.php  安装 
+上传以后  域名/install.php  安装后删除install.php
+
+
 后台   域名/admin
 
 
