@@ -26,13 +26,7 @@
 
 
 
-后台   域名/admin
 
-
-添加API 接口  只添加  域名  https://xxxx.com/
-
-
-错误添加法  https://xxxx.com/api.php/provide/vod/at/json/?ac=detail
 
 
 
