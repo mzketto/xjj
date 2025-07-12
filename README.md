@@ -23,6 +23,18 @@
 - Apache 或 Nginx 服务器
 - 可访问外部 Maccms JSON API
 
+
+上传以后  域名/install.php  安装 
+后台   域名/admin
+
+
+添加API 接口  只添加  域名  https://xxxx.com/
+
+
+错误添加法  https://xxxx.com/api.php/provide/vod/at/json/?ac=detail
+
+
+
 ### 部署步骤
 
 1. 将前端页面文件上传到服务器 Web 根目录或子目录。
