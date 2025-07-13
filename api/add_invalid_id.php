@@ -26,7 +26,7 @@ if (
 // 获取数据
 $id = intval($data['id']);
 $apiName = trim($data['api_name']);
-$filename = __DIR__ . '/invalid_ids.txt';
+$filename = __DIR__ . 'invalid_ids.txt';
 
 // 当前时间（格式：2025-07-10 03:14:15）
 $timeStr = date('Y-m-d H:i:s');
