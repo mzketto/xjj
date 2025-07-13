@@ -73,15 +73,13 @@
       word-break: break-word;
     }
 
-    #poster {
-      width: 100%;
-      aspect-ratio: 16 / 9;
-      border-radius: 14px;
-      object-fit: cover;
-      margin-bottom: 18px;
-      transition: opacity 0.3s ease;
-    }
-
+#poster {
+  width: 100%;
+  height: auto; /* 自动高度以保持宽高比 */
+  border-radius: 14px;
+  display: block;
+  margin-bottom: 18px;
+}
     #info {
       width: 100%;
       min-height: 100px;
