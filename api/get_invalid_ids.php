@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json');
 
-$filename = __DIR__ . '/invalid_ids.txt';
+$filename = __DIR__ . 'invalid_ids.txt';
 
 $invalidEntries = [];
 if (file_exists($filename)) {
