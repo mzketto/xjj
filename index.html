@@ -276,7 +276,7 @@
     <div id="sourceList">播放线路：</div>
     <video id="player" controls playsinline webkit-playsinline></video>
     <button id="randomBtn" title="点击随机播放新视频">随机播放 🎲</button>
-    <button id="recentBtn" onclick="window.location.href='/zuijin.html'">最近观看 🕘</button>
+    <button id="recentBtn" onclick="window.location.href='zuijin.html'">最近观看 🕘</button>
 
   </div>
 
@@ -307,8 +307,8 @@
     const descriptionEl = document.getElementById('description');
     const episodeListEl = document.getElementById('episodeList');
 
-    const ADD_INVALID_ID_API = '/api/add_invalid_id.php';
-    const GET_INVALID_IDS_API = '/api/get_invalid_ids.php';
+    const ADD_INVALID_ID_API = 'api/add_invalid_id.php';
+    const GET_INVALID_IDS_API = 'api/get_invalid_ids.php';
 
     let currentApiUrl = '';
     let currentApiName = '';
@@ -325,7 +325,7 @@
 
     async function fetchApiList() {
       try {
-        const res = await fetch('/api/list_apis.php');
+        const res = await fetch('api/list_apis.php');
         const json = await res.json();
         parseBaseUrl = json.parse_url;
 
@@ -354,7 +354,7 @@
     async function getMaxId() {
       try {
         const url = `${currentApiUrl}&page=1&limit=1`;
-        const res = await fetch(`/api/proxy.php?url=${encodeURIComponent(url)}`);
+        const res = await fetch(`api/proxy.php?url=${encodeURIComponent(url)}`);
         const json = await res.json();
         if (json.code === 1 && json.total) return json.total;
       } catch (e) {
@@ -506,7 +506,7 @@
 
       try {
         const url = currentApiUrl + '&ids=' + id;
-        const res = await fetch(`/api/proxy.php?url=${encodeURIComponent(url)}`);
+        const res = await fetch(`api/proxy.php?url=${encodeURIComponent(url)}`);
         const json = await res.json();
 
         if (json.code !== 1 || !json.list || json.list.length === 0) {
@@ -594,7 +594,7 @@
         const device = /mobile/i.test(ua) ? '手机' : '电脑';
         const time = new Date().toISOString();
 
-        await fetch('/api/log_visit.php', {
+        await fetch('api/log_visit.php', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
