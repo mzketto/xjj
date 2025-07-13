@@ -425,33 +425,42 @@
 
     // 播放指定线路
     function playSourceUrl(url) {
-      if (hls) {
-        hls.destroy();
-        hls = null;
-      }
-      playerEl.pause();
-      playerEl.removeAttribute('src');
-      playerEl.load();
+  if (hls) {
+    hls.destroy();
+    hls = null;
+  }
+  playerEl.pause();
+  playerEl.removeAttribute('src');
+  playerEl.load();
 
-      if (url.endsWith('.m3u8')) {
-        if (Hls.isSupported()) {
-          hls = new Hls();
-          hls.loadSource(url);
-          hls.attachMedia(playerEl);
-          hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            playerEl.play();
-          });
-        } else if (playerEl.canPlayType('application/vnd.apple.mpegurl')) {
-          playerEl.src = url;
-          playerEl.play();
-        } else {
-          alert('您的浏览器不支持播放此视频格式');
-        }
-      } else {
-        playerEl.src = url;
-        // 非m3u8不自动播放，等待用户点击播放
-      }
+  if (url.endsWith('.m3u8')) {
+    if (Hls.isSupported()) {
+      hls = new Hls();
+      hls.loadSource(url);
+      hls.attachMedia(playerEl);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        playerEl.play();
+      });
+    } else if (playerEl.canPlayType('application/vnd.apple.mpegurl')) {
+      playerEl.src = url;
+      playerEl.play();
+    } else {
+      alert('您的浏览器不支持播放此视频格式');
     }
+  } else {
+    // 设置一个封面图或提示用户点击播放（非m3u8跳转）
+    playerEl.poster = '点击播放会跳转新页面';
+    playerEl.src = ''; // 不设置 src，防止内嵌播放
+
+    // 设置点击事件：跳转新页面
+    playerEl.onclick = () => {
+      window.open(url, '_blank');
+    };
+
+    alert("该视频将跳转至新页面播放");
+  }
+}
+
 
     // 播放指定集的指定线路
     function playEpisode(episodeIndex, lineIndex = 0) {
@@ -570,9 +579,7 @@
 
     randomBtn.onclick = () => loadVideoById(getRandomValidId(maxIdGlobal, currentApiName));
 
-    playerEl.onended = () => {
-      loadVideoById(getRandomValidId(maxIdGlobal, currentApiName));
-    };
+    playerEl.onended = null;  // 取消播放结束事件
 
     // 访客日志记录
     async function logVisitorInfo(apiName, vodName, vodId) {
