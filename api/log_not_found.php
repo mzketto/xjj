@@ -9,8 +9,8 @@ $time = date('Y-m-d H:i:s');
 
 if ($api_name && $video_id) {
     $log_line = "[$time] API: $api_name, 视频ID: $video_id 未找到\n";
-    $log_dir = __DIR__ . '/logs';
-    $log_file = $log_dir . '/not_found.log';
+    $log_dir = __DIR__ . 'logs';
+    $log_file = $log_dir . 'not_found.log';
 
     if (!file_exists($log_dir)) {
         mkdir($log_dir, 0777, true);
