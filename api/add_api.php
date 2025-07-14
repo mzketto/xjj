@@ -25,7 +25,7 @@ if ($name && $api) {
     $stmt->execute();  // 执行 SQL 语句，插入数据到数据库中
 
     // 插入成功后，使用 header() 函数重定向到 /admin 页面
-    header('Location: /admin');  // 重定向到管理后台页面
+    header('Location: ../admin');  // 重定向到管理后台页面
     exit;  // 确保程序在重定向后停止执行后续代码
 } else {
     // 如果没有提供 name 或 api，则输出错误信息
