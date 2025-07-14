@@ -9,9 +9,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dbpass = trim($_POST['dbpass'] ?? ''); // 数据库密码
     $dbname = trim($_POST['dbname'] ?? ''); // 数据库名称
 
+    // 获取管理员用户名和密码
+    $admin_user = trim($_POST['admin_user'] ?? ''); // 管理员用户名
+    $admin_pass = trim($_POST['admin_pass'] ?? ''); // 管理员密码
+    $admin_pass_confirm = trim($_POST['admin_pass_confirm'] ?? ''); // 确认管理员密码
+
     // 简单验证：如果数据库连接信息缺失，终止安装
     if (!$dbhost || !$dbuser || !$dbname) {
-        die('数据库连接信息不能为空'); // 必须填写数据库主机、用户名和数据库名
+        die('数据库连接信息不能为空');
+    }
+
+    // 验证管理员密码是否一致
+    if ($admin_pass !== $admin_pass_confirm) {
+        die('两次密码输入不一致');
     }
 
     // 尝试连接到数据库
@@ -24,8 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 创建 invalid_logs 表，用于记录无效的日志信息
     $sql_invalid_logs = "CREATE TABLE IF NOT EXISTS `invalid_logs` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
-        `api_name` VARCHAR(100) NOT NULL,      // API 名称
-        `invalid_id` INT NOT NULL,             // 无效的 ID
+        `api_name` VARCHAR(100) NOT NULL,      -- API 名称
+        `invalid_id` INT NOT NULL,             -- 无效的 ID
         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
     if (!$conn->query($sql_invalid_logs)) { // 执行 SQL 创建表格，如果失败则退出
@@ -35,15 +45,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 创建 visit_logs 表，用于记录访问日志
     $sql_visit_logs = "CREATE TABLE IF NOT EXISTS `visit_logs` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
-        `date` DATE NOT NULL,                 // 访问日期
-        `time` TIME NOT NULL,                 // 访问时间
-        `ip` VARCHAR(45) NOT NULL,            // 访问者的 IP 地址
-        `isp` VARCHAR(100) NOT NULL,          // 访问者的 ISP 提供商
-        `geo` TEXT NOT NULL,                  // 访问者的地理位置信息
-        `device` VARCHAR(50) NOT NULL,        // 访问者的设备信息
-        `api_name` VARCHAR(100) NOT NULL,     // API 名称
-        `vod_name` VARCHAR(255) NOT NULL,     // 视频名称
-        `vod_id` INT NOT NULL,                // 视频 ID
+        `date` DATE NOT NULL,                 -- 访问日期
+        `time` TIME NOT NULL,                 -- 访问时间
+        `ip` VARCHAR(45) NOT NULL,            -- 访问者的 IP 地址
+        `isp` VARCHAR(100) NOT NULL,          -- 访问者的 ISP 提供商
+        `geo` TEXT NOT NULL,                  -- 访问者的地理位置信息
+        `device` VARCHAR(50) NOT NULL,        -- 访问者的设备信息
+        `api_name` VARCHAR(100) NOT NULL,     -- API 名称
+        `vod_name` VARCHAR(255) NOT NULL,     -- 视频名称
+        `vod_id` INT NOT NULL,                -- 视频 ID
         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
     if (!$conn->query($sql_visit_logs)) { // 执行 SQL 创建表格，如果失败则退出
@@ -53,8 +63,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 创建 users 表，用于存储管理员用户的登录信息
     $sql_users = "CREATE TABLE IF NOT EXISTS `users` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
-        `username` VARCHAR(50) NOT NULL UNIQUE,  // 用户名，唯一
-        `password` VARCHAR(255) NOT NULL,        // 密码
+        `username` VARCHAR(50) NOT NULL UNIQUE,  -- 用户名，唯一
+        `password` VARCHAR(255) NOT NULL,        -- 密码
         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
     if (!$conn->query($sql_users)) { // 执行 SQL 创建表格，如果失败则退出
@@ -64,14 +74,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 创建 video_apis 表，用于存储视频 API 信息
     $sql_video_apis = "CREATE TABLE IF NOT EXISTS `video_apis` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
-        `name` VARCHAR(255) NOT NULL,          // API 名称
-        `api_url` TEXT NOT NULL,               // API 地址
+        `name` VARCHAR(255) NOT NULL,          -- API 名称
+        `api_url` TEXT NOT NULL,               -- API 地址
         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
     if (!$conn->query($sql_video_apis)) { // 执行 SQL 创建表格，如果失败则退出
         die("创建 video_apis 表失败: " . $conn->error);
     }
+
+    // 密码加密（安全性建议使用哈希加密）
+    $hashed_password = password_hash($admin_pass, PASSWORD_BCRYPT);
+
+    // 插入管理员数据
+    $stmt = $conn->prepare("INSERT INTO users (username, password) VALUES (?, ?)");
+    $stmt->bind_param("ss", $admin_user, $hashed_password);
+    if (!$stmt->execute()) {
+        die("插入管理员数据失败: " . $stmt->error);
+    }
+    $stmt->close();
 
     // 生成 config.php 文件内容，其中包含数据库连接配置
     $config_content = <<<PHP
