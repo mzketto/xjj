@@ -7,11 +7,6 @@ if (!isset($_SESSION['user'])) {
     exit;
 }
 
-// 读取解析地址
-$p = $conn->query("SELECT value FROM config WHERE key_name='player_parse_url'");
-$row = $p ? $p->fetch_assoc() : null;
-$parseUrl = htmlspecialchars($row['value'] ?? '', ENT_QUOTES);
-
 // ========== 无效ID日志分页，从数据库读取 ==========
 $linesPerPage = 50;
 $invalidPage = isset($_GET['invalid_page']) ? max(1, intval($_GET['invalid_page'])) : 1;
@@ -306,9 +301,6 @@ $uniqueTodayIpCount = $todayRes ? (int)($todayRes->fetch_assoc()['total'] ?? 0) 
       echo "<button type='submit'>删除</button></form><br>";
     }
     ?>
-
-    
-    </form>
   </div>
 
   <!-- 无效ID日志 -->
