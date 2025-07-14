@@ -8,19 +8,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dbpass = trim($_POST['dbpass'] ?? '');
     $dbname = trim($_POST['dbname'] ?? '');
 
-    $admin_user = trim($_POST['admin_user'] ?? '');
-    $admin_pass = trim($_POST['admin_pass'] ?? '');
-    $admin_pass_confirm = trim($_POST['admin_pass_confirm'] ?? '');
-
     // 简单验证
     if (!$dbhost || !$dbuser || !$dbname) {
         die('数据库连接信息不能为空');
-    }
-    if (!$admin_user || !$admin_pass) {
-        die('管理员账号密码不能为空');
-    }
-    if ($admin_pass !== $admin_pass_confirm) {
-        die('管理员密码和确认密码不一致');
     }
 
     // 连接数据库
@@ -30,31 +20,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $conn->set_charset('utf8mb4');
 
-    // 创建 config 表
-    $sql_config = "CREATE TABLE IF NOT EXISTS `config` (
+    // 创建 invalid_logs 表
+    $sql_invalid_logs = "CREATE TABLE IF NOT EXISTS `invalid_logs` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
-        `key_name` VARCHAR(100) NOT NULL UNIQUE,
-        `value` TEXT NOT NULL,
-        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        `api_name` VARCHAR(100) NOT NULL,
+        `invalid_id` INT NOT NULL,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
-    if (!$conn->query($sql_config)) {
-        die("创建 config 表失败: " . $conn->error);
+    if (!$conn->query($sql_invalid_logs)) {
+        die("创建 invalid_logs 表失败: " . $conn->error);
     }
 
-    // 创建 video_apis 表
-    $sql_apis = "CREATE TABLE IF NOT EXISTS `video_apis` (
+    // 创建 visit_logs 表
+    $sql_visit_logs = "CREATE TABLE IF NOT EXISTS `visit_logs` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
-        `name` VARCHAR(255) NOT NULL,
-        `api_url` TEXT NOT NULL,
-        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        `date` DATE NOT NULL,
+        `time` TIME NOT NULL,
+        `ip` VARCHAR(45) NOT NULL,
+        `isp` VARCHAR(100) NOT NULL,
+        `geo` TEXT NOT NULL,
+        `device` VARCHAR(50) NOT NULL,
+        `api_name` VARCHAR(100) NOT NULL,
+        `vod_name` VARCHAR(255) NOT NULL,
+        `vod_id` INT NOT NULL,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
-    if (!$conn->query($sql_apis)) {
-        die("创建 video_apis 表失败: " . $conn->error);
+    if (!$conn->query($sql_visit_logs)) {
+        die("创建 visit_logs 表失败: " . $conn->error);
     }
 
-    // 创建 users 管理员表
+    // 创建 users 表
     $sql_users = "CREATE TABLE IF NOT EXISTS `users` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
         `username` VARCHAR(50) NOT NULL UNIQUE,
@@ -65,33 +60,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         die("创建 users 表失败: " . $conn->error);
     }
 
-    // 插入管理员用户（密码使用 password_hash 加密）
-    $stmt = $conn->prepare("SELECT id FROM users WHERE username = ? LIMIT 1");
-    $stmt->bind_param('s', $admin_user);
-    $stmt->execute();
-    $stmt->store_result();
-    if ($stmt->num_rows == 0) {
-        $stmt->close();
-
-        $hashed_password = password_hash($admin_pass, PASSWORD_DEFAULT);
-        $stmt2 = $conn->prepare("INSERT INTO users (username, password) VALUES (?, ?)");
-        $stmt2->bind_param('ss', $admin_user, $hashed_password);
-        $stmt2->execute();
-        $stmt2->close();
-    } else {
-        $stmt->close();
-    }
-
-    // 插入默认解析地址配置（如果不存在）
-    $check = $conn->query("SELECT id FROM config WHERE key_name='player_parse_url' LIMIT 1");
-    if ($check->num_rows == 0) {
-        $defaultParseUrl = 'http://your_default_parse_url.com/parse?url=';
-        $stmt3 = $conn->prepare("INSERT INTO config (key_name, value) VALUES (?, ?)");
-        $key = 'player_parse_url';
-        $value = $defaultParseUrl;
-        $stmt3->bind_param('ss', $key, $value);
-        $stmt3->execute();
-        $stmt3->close();
+    // 创建 video_apis 表
+    $sql_video_apis = "CREATE TABLE IF NOT EXISTS `video_apis` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `name` VARCHAR(255) NOT NULL,
+        `api_url` TEXT NOT NULL,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+    if (!$conn->query($sql_video_apis)) {
+        die("创建 video_apis 表失败: " . $conn->error);
     }
 
     // 生成 config.php 文件内容
@@ -117,7 +95,17 @@ PHP;
         die('生成 config.php 文件失败，请检查目录权限');
     }
 
-    echo "安装完成，表创建成功，管理员账号已添加。<br>";
+    // 生成一个随机 24 位字符作为新文件名
+    $new_filename = bin2hex(random_bytes(12)) . '.php';
+
+    // 重命名 install.php 为新生成的文件名
+    $old_filename = __FILE__; // 当前脚本文件的路径
+    if (!rename($old_filename, __DIR__ . '/' . $new_filename)) {
+        die('重命名安装脚本失败，请检查目录权限');
+    }
+
+    echo "安装完成，表创建成功，数据库配置文件生成成功。<br>";
+    echo "安装脚本已重命名为：$new_filename<br>";
     echo "请删除或重命名 install.php 以保障安全。<br>";
     echo '<a href="admin/login.php">前往登录</a>';
     exit;
@@ -130,17 +118,99 @@ PHP;
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>安装向导</title>
+<!-- 引入 Google 字体（Roboto）和苹果系统字体 -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
 <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; background:#f0f0f0; }
-    form { max-width: 400px; margin: 50px auto; background:#fff; padding:20px; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1);}
-    label { display:block; margin-top:15px; font-weight:600; }
-    input[type=text], input[type=password] { width:100%; padding:8px; margin-top:6px; border:1px solid #ccc; border-radius:6px; }
-    button { margin-top:20px; width:100%; padding:10px; background:#007aff; border:none; color:#fff; font-weight:700; border-radius:8px; cursor:pointer; }
+    body { 
+        font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+        background: #f9f9f9;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+    }
+
+    form { 
+        background: #fff;
+        padding: 40px;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 450px;
+        box-sizing: border-box;
+    }
+
+    h2 {
+        text-align: center;
+        color: #333;
+        margin-bottom: 20px;
+    }
+
+    label { 
+        display: block;
+        margin: 15px 0 5px;
+        font-weight: 500;
+        color: #555;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+        width: 100%;
+        padding: 12px;
+        margin: 8px 0;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        background-color: #f5f5f5;
+        font-size: 16px;
+        color: #333;
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus {
+        border-color: #007aff;
+        outline: none;
+    }
+
+    button {
+        background: #007aff;
+        color: white;
+        font-size: 16px;
+        padding: 12px;
+        width: 100%;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 700;
+        transition: background-color 0.3s;
+    }
+
+    button:hover {
+        background-color: #005bb5;
+    }
+
+    hr {
+        border: 1px solid #ddd;
+        margin: 20px 0;
+    }
+
+    a {
+        display: block;
+        text-align: center;
+        margin-top: 20px;
+        color: #007aff;
+        font-weight: 600;
+    }
+
+    a:hover {
+        text-decoration: underline;
+    }
 </style>
 </head>
 <body>
-<h2 style="text-align:center;">安装向导</h2>
 <form method="POST">
+    <h2>安装向导</h2>
     <label>数据库主机</label>
     <input type="text" name="dbhost" value="localhost" required />
 
