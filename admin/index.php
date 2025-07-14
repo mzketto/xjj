@@ -9,71 +9,63 @@ if (!isset($_SESSION['user'])) {
 
 // 读取解析地址
 $p = $conn->query("SELECT value FROM config WHERE key_name='player_parse_url'");
-$row = $p->fetch_assoc();
+$row = $p ? $p->fetch_assoc() : null;
 $parseUrl = htmlspecialchars($row['value'] ?? '', ENT_QUOTES);
 
-// 日志分页
+// ========== 无效ID日志分页，从数据库读取 ==========
 $linesPerPage = 50;
 $invalidPage = isset($_GET['invalid_page']) ? max(1, intval($_GET['invalid_page'])) : 1;
-$invalidFilename = __DIR__ . '/../api/invalid_ids.txt';
-$visitLogFile = __DIR__ . '/../api/visit_log.txt';
+$invalidOffset = ($invalidPage - 1) * $linesPerPage;
 
-$invalidLines = file_exists($invalidFilename)
-  ? file($invalidFilename, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES)
-  : [];
+$totalInvalidRes = $conn->query("SELECT COUNT(*) AS total FROM invalid_logs");
+$invalidTotal = $totalInvalidRes ? (int)($totalInvalidRes->fetch_assoc()['total'] ?? 0) : 0;
+$invalidTotalPages = max(1, ceil($invalidTotal / $linesPerPage));
 
-$invalidTotal = count($invalidLines);
-$invalidTotalPages = ceil($invalidTotal / $linesPerPage);
-$invalidStart = ($invalidPage - 1) * $linesPerPage;
-$invalidPageLines = array_slice($invalidLines, $invalidStart, $linesPerPage);
-
-// 统计无效ID数量
-$apiCount = [];
-foreach ($invalidLines as $line) {
-    $parts = explode(' ', $line, 2);
-    $apiName = trim($parts[0] ?? '未知API');
-    if (!isset($apiCount[$apiName])) {
-        $apiCount[$apiName] = 0;
+$invalidPageRows = [];
+$invalidRes = $conn->query("SELECT * FROM invalid_logs ORDER BY id DESC LIMIT {$invalidOffset}, {$linesPerPage}");
+if ($invalidRes) {
+    while ($row = $invalidRes->fetch_assoc()) {
+        $invalidPageRows[] = $row;
     }
-    $apiCount[$apiName]++;
+}
+
+// 统计无效ID数量（API名称 => 数量）
+$apiCount = [];
+$allInvalidRes = $conn->query("SELECT api_name FROM invalid_logs");
+if ($allInvalidRes) {
+    while ($row = $allInvalidRes->fetch_assoc()) {
+        $apiName = $row['api_name'] ?? '未知API';
+        $apiCount[$apiName] = ($apiCount[$apiName] ?? 0) + 1;
+    }
 }
 $apiNames = json_encode(array_keys($apiCount), JSON_UNESCAPED_UNICODE);
 $apiValues = json_encode(array_values($apiCount));
 
-// 访问日志
-$visitLogLines = file_exists($visitLogFile)
-  ? file($visitLogFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES)
-  : [];
-
-// 访问日志分页参数
-$visitPage = isset($_GET['visit_page']) ? max(1, intval($_GET['visit_page'])) : 1;
+// ========== 访问日志分页，从数据库读取 ==========
 $visitLinesPerPage = 50;
-$visitTotal = count($visitLogLines);
-$visitTotalPages = ceil($visitTotal / $visitLinesPerPage);
-$visitStart = ($visitPage - 1) * $visitLinesPerPage;
-$visitPageLines = array_slice($visitLogLines, $visitStart, $visitLinesPerPage);
+$visitPage = isset($_GET['visit_page']) ? max(1, intval($_GET['visit_page'])) : 1;
+$visitOffset = ($visitPage - 1) * $visitLinesPerPage;
 
-// 计算历史访问IP数量（去重）
-$allIps = [];
-// 计算今日访问IP数量（去重）
-$todayIps = [];
-$todayDate = date('Y-m-d');
+$totalVisitRes = $conn->query("SELECT COUNT(*) AS total FROM visit_logs");
+$visitTotal = $totalVisitRes ? (int)($totalVisitRes->fetch_assoc()['total'] ?? 0) : 0;
+$visitTotalPages = max(1, ceil($visitTotal / $visitLinesPerPage));
 
-foreach ($visitLogLines as $line) {
-    $parts = explode('|', $line);
-    $ip = trim($parts[2] ?? '');
-    $date = trim($parts[0] ?? '');
-
-    if ($ip !== '') {
-        $allIps[$ip] = true;
-        if ($date === $todayDate) {
-            $todayIps[$ip] = true;
-        }
+$visitPageRows = [];
+$visitRes = $conn->query("SELECT * FROM visit_logs ORDER BY id DESC LIMIT {$visitOffset}, {$visitLinesPerPage}");
+if ($visitRes) {
+    while ($row = $visitRes->fetch_assoc()) {
+        $visitPageRows[] = $row;
     }
 }
 
-$uniqueIpCount = count($allIps);
-$uniqueTodayIpCount = count($todayIps);
+// 历史访问IP数（去重）
+$ipRes = $conn->query("SELECT COUNT(DISTINCT ip) AS total FROM visit_logs");
+$uniqueIpCount = $ipRes ? (int)($ipRes->fetch_assoc()['total'] ?? 0) : 0;
+
+// 今日访问IP数（去重）
+$todayDate = date('Y-m-d');
+$todayRes = $conn->query("SELECT COUNT(DISTINCT ip) AS total FROM visit_logs WHERE date = '{$todayDate}'");
+$uniqueTodayIpCount = $todayRes ? (int)($todayRes->fetch_assoc()['total'] ?? 0) : 0;
 
 ?>
 <!DOCTYPE html>
@@ -90,7 +82,6 @@ $uniqueTodayIpCount = count($todayIps);
       background-color: #f5f6fa;
       color: #1c1c1e;
     }
-
     .nav {
       display: flex;
       flex-wrap: wrap;
@@ -101,7 +92,6 @@ $uniqueTodayIpCount = count($todayIps);
       top: 0;
       z-index: 10;
     }
-
     .nav button {
       background: none;
       border: none;
@@ -115,11 +105,9 @@ $uniqueTodayIpCount = count($todayIps);
       transition: all 0.3s ease;
       flex-shrink: 0;
     }
-
     .nav button.active {
       border-color: white;
     }
-
     .container {
       max-width: 900px;
       margin: 20px auto;
@@ -128,26 +116,22 @@ $uniqueTodayIpCount = count($todayIps);
       box-shadow: 0 14px 36px rgba(0, 0, 0, 0.08);
       padding: 24px;
     }
-
     h2 {
       font-size: 1.3rem;
       margin-bottom: 20px;
       border-bottom: 2px solid #007aff;
       padding-bottom: 8px;
     }
-
     form {
       display: flex;
       flex-wrap: wrap;
       gap: 12px;
       margin-bottom: 30px;
     }
-
     label {
       flex: 1 0 80px;
       font-weight: 600;
     }
-
     input[type="text"],
     input[type="url"] {
       flex: 1 1 200px;
@@ -157,13 +141,11 @@ $uniqueTodayIpCount = count($todayIps);
       border-radius: 12px;
       background-color: #f9f9fb;
     }
-
     input:focus {
       border-color: #007aff;
       background-color: #fff;
       outline: none;
     }
-
     button {
       background-color: #007aff;
       border: none;
@@ -174,7 +156,6 @@ $uniqueTodayIpCount = count($todayIps);
       border-radius: 18px;
       cursor: pointer;
     }
-
     .api-edit-form {
       border: 1px solid #eee;
       padding: 14px;
@@ -182,32 +163,26 @@ $uniqueTodayIpCount = count($todayIps);
       margin-bottom: 12px;
       background-color: #fafafa;
     }
-
     .api-edit-form input[readonly] {
       background-color: #e5e5ea;
       font-weight: bold;
     }
-
     .delete-form {
       display: inline-block;
       margin-left: 10px;
     }
-
     .delete-form button {
       background-color: #ff3b30;
     }
-
     .table-wrapper {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
     }
-
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 15px;
     }
-
     th,
     td {
       padding: 10px;
@@ -217,44 +192,35 @@ $uniqueTodayIpCount = count($todayIps);
       min-width: 100px;
       font-size: 0.95rem;
     }
-
     th {
       background-color: #ff3b30;
       color: white;
     }
-
-    /* 具体列最小宽度调整 */
     th:nth-child(1),
     td:nth-child(1) {
       min-width: 40px;
     }
-
     th:nth-child(4),
     td:nth-child(4) {
       min-width: 140px;
     }
-
     th:nth-child(5),
     td:nth-child(5) {
       min-width: 160px;
     }
-
     th:nth-child(7),
     td:nth-child(7) {
       min-width: 120px;
     }
-
     th:nth-child(8),
     td:nth-child(8) {
       min-width: 180px;
     }
-
     .pagination {
       text-align: center;
       margin-top: 15px;
       flex-wrap: wrap;
     }
-
     .pagination a,
     .pagination .current {
       display: inline-block;
@@ -265,47 +231,37 @@ $uniqueTodayIpCount = count($todayIps);
       text-decoration: none;
       font-size: 0.9rem;
     }
-
     .pagination .current {
       background-color: #ff3b30;
       color: white;
     }
-
     .section {
       display: none;
     }
-
     .section.active {
       display: block;
     }
-
     #barChart,
     #pieChart {
       max-width: 100%;
       height: auto;
     }
-
-    /* 小屏设备优化 */
     @media (max-width: 600px) {
       .nav button {
         font-size: 0.9rem;
         padding: 6px 10px;
       }
-
       input[type="text"],
       input[type="url"] {
         width: 100%;
       }
-
       label {
         flex: 0 0 100%;
       }
-
       .api-edit-form,
       .container {
         padding: 20px 15px;
       }
-
       th,
       td {
         white-space: normal;
@@ -341,27 +297,24 @@ $uniqueTodayIpCount = count($todayIps);
     $res = $conn->query("SELECT * FROM video_apis ORDER BY id DESC");
     while ($row = $res->fetch_assoc()) {
       echo "<form class='api-edit-form' method='POST' action='../api/edit_api.php'>";
-      echo "ID: <input name='id' value='{$row['id']}' readonly> ";
-      echo "名称: <input name='name' value='{$row['name']}' required> ";
-      echo "地址: <input name='api_url' value='{$row['api_url']}' required> ";
+      echo "ID: <input name='id' value='" . htmlspecialchars($row['id']) . "' readonly> ";
+      echo "名称: <input name='name' value='" . htmlspecialchars($row['name']) . "' required> ";
+      echo "地址: <input name='api_url' value='" . htmlspecialchars($row['api_url']) . "' required> ";
       echo "<button type='submit'>保存</button></form>";
       echo "<form class='delete-form' method='POST' action='../api/delete_api.php' onsubmit=\"return confirm('确定删除吗？');\">";
-      echo "<input type='hidden' name='id' value='{$row['id']}'>";
+      echo "<input type='hidden' name='id' value='" . htmlspecialchars($row['id']) . "'>";
       echo "<button type='submit'>删除</button></form><br>";
     }
     ?>
 
-    <h2>设置解析地址</h2>
-    <form method="POST" action="../api/update_parse.php">
-      <input name="parse_url" type="url" value="<?php echo $parseUrl; ?>" required style="width:100%;">
-      <button type="submit" style="margin-top: 10px;">保存</button>
+    
     </form>
   </div>
 
   <!-- 无效ID日志 -->
   <div class="container section" id="section-log">
     <h2>无效ID日志</h2>
-    <?php if (empty($invalidLines)): ?>
+    <?php if (empty($invalidPageRows)): ?>
       <p>暂无日志记录。</p>
     <?php else: ?>
       <table>
@@ -374,19 +327,18 @@ $uniqueTodayIpCount = count($todayIps);
           </tr>
         </thead>
         <tbody>
-          <?php foreach ($invalidPageLines as $i => $line):
-            $num = $invalidStart + $i + 1;
-            $parts = explode(' ', $line, 4);
-            $api = htmlspecialchars($parts[0] ?? '');
-            $id = htmlspecialchars($parts[1] ?? '');
-            $time = htmlspecialchars(($parts[2] ?? '') . ' ' . ($parts[3] ?? ''));
-            ?>
-            <tr>
-              <td><?= $num ?></td>
-              <td><?= $api ?></td>
-              <td><?= $id ?></td>
-              <td><?= $time ?></td>
-            </tr>
+          <?php foreach ($invalidPageRows as $i => $row): 
+            $num = $invalidOffset + $i + 1;
+            $api = htmlspecialchars($row['api_name']);
+            $id = htmlspecialchars($row['invalid_id']);
+            $time = htmlspecialchars($row['created_at']);
+          ?>
+          <tr>
+            <td><?= $num ?></td>
+            <td><?= $api ?></td>
+            <td><?= $id ?></td>
+            <td><?= $time ?></td>
+          </tr>
           <?php endforeach; ?>
         </tbody>
       </table>
@@ -418,7 +370,7 @@ $uniqueTodayIpCount = count($todayIps);
 
     <p><strong>历史访问IP数量：</strong><?= $uniqueIpCount ?> &nbsp;&nbsp; <strong>今日访问IP数量：</strong><?= $uniqueTodayIpCount ?></p>
 
-    <?php if (empty($visitLogLines)): ?>
+    <?php if (empty($visitPageRows)): ?>
       <p>暂无访问日志记录。</p>
     <?php else: ?>
       <div class="table-wrapper">
@@ -436,27 +388,18 @@ $uniqueTodayIpCount = count($todayIps);
             </tr>
           </thead>
           <tbody>
-            <?php foreach ($visitPageLines as $i => $line): 
-              $num = $visitStart + $i + 1;
-              $parts = explode('|', $line);
-              $parts = array_map('trim', $parts);
-              $date = htmlspecialchars($parts[0] ?? '');
-              $time = htmlspecialchars($parts[1] ?? '');
-              $ip = htmlspecialchars($parts[2] ?? '');
-              $location = htmlspecialchars($parts[3] ?? '');
-              $device = htmlspecialchars($parts[4] ?? '');
-              $api = htmlspecialchars($parts[5] ?? '');
-              $title = htmlspecialchars($parts[6] ?? '');
+            <?php foreach ($visitPageRows as $i => $row): 
+              $num = $visitOffset + $i + 1;
               ?>
               <tr>
                 <td><?= $num ?></td>
-                <td><?= $date ?></td>
-                <td><?= $time ?></td>
-                <td><?= $ip ?></td>
-                <td><?= $location ?></td>
-                <td><?= $device ?></td>
-                <td><?= $api ?></td>
-                <td><?= $title ?></td>
+                <td><?= htmlspecialchars($row['date']) ?></td>
+                <td><?= htmlspecialchars($row['time']) ?></td>
+                <td><?= htmlspecialchars($row['ip']) ?></td>
+                <td><?= htmlspecialchars($row['geo']) ?>（<?= htmlspecialchars($row['isp']) ?>）</td>
+                <td><?= htmlspecialchars($row['device']) ?></td>
+                <td><?= htmlspecialchars($row['api_name']) ?></td>
+                <td><?= htmlspecialchars($row['vod_name']) ?></td>
               </tr>
             <?php endforeach; ?>
           </tbody>
@@ -554,7 +497,7 @@ $uniqueTodayIpCount = count($todayIps);
 
     document.getElementById('logoutBtn').addEventListener('click', () => {
       if (confirm('确定登出吗？')) {
-        window.location.href = '/admin/logout.php';
+        window.location.href = 'logout.php';
       }
     });
   </script>
