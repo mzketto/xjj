@@ -1,248 +1,272 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN"> <!-- 设置页面的语言为简体中文 -->
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>随机多源视频播放 - Apple风格UI</title>
+  <meta charset="UTF-8" /> <!-- 设置字符编码为UTF-8 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1" /> <!-- 设置视口，使页面适配各种设备 -->
+  <title>随机多源视频播放 - Apple风格UI</title> <!-- 页面标题 -->
+  <link rel="icon" href="favicon.ico" type="image/x-icon"> <!-- 设置页面的图标 -->
+
+  <!-- DPlayer 样式 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dplayer/dist/DPlayer.min.css" /> <!-- 引入DPlayer播放器的CSS样式 -->
+
   <style>
     * {
-      box-sizing: border-box;
+      box-sizing: border-box; <!-- 设置所有元素的box-sizing为border-box，避免内外边距计算问题 -->
     }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-        Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-      background: #f9f9fb;
-      color: #333;
-      margin: 0;
-      padding: 20px;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start; /* 防止跳中间 */
-      min-height: 100vh;
+        Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif; <!-- 设置字体为苹果系统字体 -->
+      background: #f9f9fb; <!-- 背景颜色 -->
+      color: #333; <!-- 字体颜色 -->
+      margin: 0; <!-- 去除外边距 -->
+      padding: 20px; <!-- 设置内边距 -->
+      display: flex; <!-- 使用flexbox布局 -->
+      justify-content: center; <!-- 设置主轴居中 -->
+      align-items: flex-start; <!-- 设置交叉轴顶部对齐 -->
+      min-height: 100vh; <!-- 设置最小高度为视口高度 -->
     }
+
     #recentBtn {
-  width: 100%;
-  margin-top: 12px;
-  padding: 10px 0;
-  font-size: 1rem;
-  font-weight: 600;
-  background-color: #f0f0f0;
-  color: #333;
-  border: none;
-  border-radius: 18px;
-  cursor: pointer;
-  user-select: none;
-  transition: background-color 0.2s ease;
-}
+      width: 100%; <!-- 设置按钮宽度为100% -->
+      margin-top: 12px; <!-- 设置按钮上边距 -->
+      padding: 10px 0; <!-- 设置按钮内边距 -->
+      font-size: 1rem; <!-- 设置字体大小 -->
+      font-weight: 600; <!-- 设置字体加粗 -->
+      background-color: #f0f0f0; <!-- 设置背景颜色 -->
+      color: #333; <!-- 设置字体颜色 -->
+      border: none; <!-- 去除边框 -->
+      border-radius: 18px; <!-- 设置圆角 -->
+      cursor: pointer; <!-- 设置鼠标样式为指针 -->
+      user-select: none; <!-- 禁止文本选中 -->
+      transition: background-color 0.2s ease; <!-- 设置背景颜色的过渡效果 -->
+    }
 
-#recentBtn:hover {
-  background-color: #e4e4e4;
-}
-
+    #recentBtn:hover {
+      background-color: #e4e4e4; <!-- 设置按钮悬停时的背景颜色 -->
+    }
 
     .container {
-      background: #fff;
-      max-width: 95vw;
-      width: 480px;
-      border-radius: 16px;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-      padding: 20px 25px 30px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin: 0 10px;
+      background: #fff; <!-- 设置容器背景色 -->
+      max-width: 95vw; <!-- 设置最大宽度为视口宽度的95% -->
+      width: 480px; <!-- 设置容器宽度为480px -->
+      border-radius: 16px; <!-- 设置容器圆角 -->
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1); <!-- 设置阴影效果 -->
+      padding: 20px 25px 30px; <!-- 设置容器的内边距 -->
+      display: flex; <!-- 使用flexbox布局 -->
+      flex-direction: column; <!-- 设置为纵向布局 -->
+      align-items: center; <!-- 设置子元素居中 -->
+      margin: 0 10px; <!-- 设置左右边距 -->
     }
 
     #apiSelect {
-      width: 100%;
-      margin-bottom: 12px;
-      padding: 8px;
-      border-radius: 12px;
-      border: 1px solid #ccc;
-      font-size: 1rem;
-      background: #f9f9f9;
+      width: 100%; <!-- 设置选择框宽度为100% -->
+      margin-bottom: 12px; <!-- 设置下边距 -->
+      padding: 8px; <!-- 设置内边距 -->
+      border-radius: 12px; <!-- 设置圆角 -->
+      border: 1px solid #ccc; <!-- 设置边框颜色 -->
+      font-size: 1rem; <!-- 设置字体大小 -->
+      background: #f9f9f9; <!-- 设置背景颜色 -->
     }
 
     h2#title {
-      font-weight: 600;
-      font-size: 1.4rem;
-      margin: 10px 0 15px;
-      color: #111;
-      text-align: center;
-      word-break: break-word;
+      font-weight: 600; <!-- 设置字体加粗 -->
+      font-size: 1.4rem; <!-- 设置字体大小 -->
+      margin: 10px 0 15px; <!-- 设置上下边距 -->
+      color: #111; <!-- 设置字体颜色 -->
+      text-align: center; <!-- 设置文本居中 -->
+      word-break: break-word; <!-- 设置文本换行 -->
     }
 
-#poster {
-  width: 100%;
-  height: auto; /* 自动高度以保持宽高比 */
-  border-radius: 14px;
-  display: block;
-  margin-bottom: 18px;
-}
+    #poster {
+      width: 100%; <!-- 设置图片宽度为100% -->
+      height: auto; <!-- 设置图片高度自动调整 -->
+      border-radius: 14px; <!-- 设置圆角 -->
+      display: block; <!-- 设置图片为块级元素 -->
+      margin-bottom: 18px; <!-- 设置底部边距 -->
+    }
+
     #info {
-      width: 100%;
-      min-height: 100px;
+      width: 100%; <!-- 设置信息容器宽度为100% -->
+      min-height: 100px; <!-- 设置最小高度 -->
     }
 
     #info p {
-      margin: 4px 0;
-      font-size: 0.9rem;
-      color: #555;
-      word-break: break-word;
+      margin: 4px 0; <!-- 设置段落的上下边距 -->
+      font-size: 0.9rem; <!-- 设置字体大小 -->
+      color: #555; <!-- 设置字体颜色 -->
+      word-break: break-word; <!-- 设置文本换行 -->
     }
 
-    /* 简介区域折叠 */
     #desc-wrapper {
-      position: relative;
-      max-width: 100%;
-      margin-top: 4px;
+      position: relative; <!-- 设置位置为相对 -->
+      max-width: 100%; <!-- 设置最大宽度为100% -->
+      margin-top: 4px; <!-- 设置顶部边距 -->
     }
 
     #description {
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      font-size: 0.9rem;
-      color: #555;
-      transition: all 0.3s ease;
-      min-height: 2.5em;
+      display: -webkit-box; <!-- 使用webkit盒模型布局 -->
+      -webkit-line-clamp: 2; <!-- 限制显示2行文本 -->
+      -webkit-box-orient: vertical; <!-- 设置盒子方向为垂直 -->
+      overflow: hidden; <!-- 超出部分隐藏 -->
+      font-size: 0.9rem; <!-- 设置字体大小 -->
+      color: #555; <!-- 设置字体颜色 -->
+      transition: all 0.3s ease; <!-- 设置过渡效果 -->
+      min-height: 2.5em; <!-- 设置最小高度 -->
     }
 
     #desc-wrapper.expanded #description {
-      -webkit-line-clamp: unset;
-      overflow: visible;
+      -webkit-line-clamp: unset; <!-- 展开时取消行数限制 -->
+      overflow: visible; <!-- 展开时显示溢出部分 -->
     }
 
     #desc-toggle {
-      background: none;
-      border: none;
-      color: #007aff;
-      font-size: 0.85rem;
-      cursor: pointer;
-      padding: 4px 0;
-      text-align: left;
-      user-select: none;
+      background: none; <!-- 设置背景为透明 -->
+      border: none; <!-- 去除边框 -->
+      color: #007aff; <!-- 设置文字颜色 -->
+      font-size: 0.85rem; <!-- 设置字体大小 -->
+      cursor: pointer; <!-- 设置鼠标样式为指针 -->
+      padding: 4px 0; <!-- 设置内边距 -->
+      text-align: left; <!-- 设置文本左对齐 -->
+      user-select: none; <!-- 禁止文本选中 -->
     }
 
-    /* 集数列表美化 */
     #episodeList {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px 12px;
-      margin: 10px 0 20px;
-      width: 100%;
+      display: flex; <!-- 使用flexbox布局 -->
+      flex-wrap: wrap; <!-- 允许换行 -->
+      gap: 8px 12px; <!-- 设置间距 -->
+      margin: 10px 0 20px; <!-- 设置外边距 -->
+      width: 100%; <!-- 设置宽度为100% -->
     }
 
     #episodeList button {
-      padding: 6px 12px;
-      border-radius: 12px;
-      border: 1.2px solid #ccc;
-      background: #f2f2f4;
-      font-size: 0.92rem;
-      color: #333;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      user-select: none;
+      padding: 6px 12px; <!-- 设置按钮的内边距 -->
+      border-radius: 12px; <!-- 设置按钮圆角 -->
+      border: 1.2px solid #ccc; <!-- 设置边框 -->
+      background: #f2f2f4; <!-- 设置背景色 -->
+      font-size: 0.92rem; <!-- 设置字体大小 -->
+      color: #333; <!-- 设置字体颜色 -->
+      cursor: pointer; <!-- 设置鼠标样式为指针 -->
+      transition: all 0.2s ease; <!-- 设置过渡效果 -->
+      user-select: none; <!-- 禁止文本选中 -->
     }
 
     #episodeList button:hover {
-      background-color: #e4e4e9;
-      border-color: #aaa;
+      background-color: #e4e4e9; <!-- 设置悬停时背景颜色 -->
+      border-color: #aaa; <!-- 设置悬停时边框颜色 -->
     }
 
     #episodeList button.active {
-      background-color: #007aff;
-      color: white;
-      border-color: #007aff;
-      box-shadow: 0 2px 6px rgba(0, 122, 255, 0.35);
+      background-color: #007aff; <!-- 设置激活时背景颜色 -->
+      color: white; <!-- 设置激活时字体颜色 -->
+      border-color: #007aff; <!-- 设置激活时边框颜色 -->
+      box-shadow: 0 2px 6px rgba(0, 122, 255, 0.35); <!-- 设置激活时阴影 -->
     }
 
     #sourceList {
-      width: 100%;
-      margin-bottom: 12px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px 12px;
+      width: 100%; <!-- 设置宽度为100% -->
+      margin-bottom: 12px; <!-- 设置底部边距 -->
+      display: flex; <!-- 使用flexbox布局 -->
+      flex-wrap: wrap; <!-- 允许换行 -->
+      gap: 8px 12px; <!-- 设置间距 -->
     }
 
     #sourceList button.source-btn {
-      padding: 8px 15px;
-      border-radius: 14px;
-      border: 1.5px solid #ddd;
-      background: #f6f6f8;
-      font-weight: 600;
-      cursor: pointer;
-      flex: 1 1 auto;
-      min-width: 80px;
-      text-align: center;
-      user-select: none;
-      transition: all 0.3s ease;
+      padding: 8px 15px; <!-- 设置按钮内边距 -->
+      border-radius: 14px; <!-- 设置圆角 -->
+      border: 1.5px solid #ddd; <!-- 设置边框颜色 -->
+      background: #f6f6f8; <!-- 设置背景颜色 -->
+      font-weight: 600; <!-- 设置字体加粗 -->
+      cursor: pointer; <!-- 设置鼠标样式为指针 -->
+      flex: 1 1 auto; <!-- 设置按钮的自动扩展 -->
+      min-width: 80px; <!-- 设置最小宽度 -->
+            text-align: center; <!-- 设置文本居中对齐 -->
+      user-select: none; <!-- 禁止文本选中 -->
+      transition: all 0.3s ease; <!-- 设置过渡效果 -->
     }
 
     #sourceList button.source-btn:hover {
-      background: #e6e6eb;
-      border-color: #aaa;
+      background: #e6e6eb; <!-- 设置按钮悬停时的背景颜色 -->
+      border-color: #aaa; <!-- 设置悬停时的边框颜色 -->
     }
 
     #sourceList button.active {
-      background: #007aff;
-      border-color: #007aff;
-      color: white;
-      box-shadow: 0 3px 8px rgba(0, 122, 255, 0.4);
+      background: #007aff; <!-- 设置激活按钮的背景颜色 -->
+      border-color: #007aff; <!-- 设置激活按钮的边框颜色 -->
+      color: white; <!-- 设置激活按钮的字体颜色 -->
+      box-shadow: 0 3px 8px rgba(0, 122, 255, 0.4); <!-- 设置激活按钮的阴影效果 -->
     }
 
-    video#player {
-      width: 100%;
-      aspect-ratio: 16 / 9;
-      border-radius: 14px;
-      background: #000;
-      margin-bottom: 20px;
-      box-shadow: 0 6px 22px rgba(0, 0, 0, 0.12);
-      outline: none;
+    /* DPlayer容器样式 */
+    #dplayer {
+      width: 100%; <!-- 设置播放器容器宽度为100% -->
+      aspect-ratio: 16 / 9; <!-- 设置播放器的宽高比为16:9 -->
+      border-radius: 14px; <!-- 设置播放器的圆角 -->
+      background: #000; <!-- 设置播放器背景色为黑色 -->
+      margin-bottom: 20px; <!-- 设置底部边距 -->
+      box-shadow: 0 6px 22px rgba(0, 0, 0, 0.12); <!-- 设置播放器的阴影效果 -->
+      outline: none; <!-- 去除播放器的外边框 -->
+      position: relative; <!-- 设置播放器为相对定位 -->
+      color: #fff; <!-- 设置播放器的文字颜色 -->
+      font-size: 1.1rem; <!-- 设置播放器字体大小 -->
+      display: flex; <!-- 使用flex布局 -->
+      justify-content: center; <!-- 设置内容水平居中 -->
+      align-items: center; <!-- 设置内容垂直居中 -->
+      text-align: center; <!-- 设置文本居中对齐 -->
+      padding: 0 15px; <!-- 设置播放器内边距 -->
+      user-select: none; <!-- 禁止选中内容 -->
+    }
+
+    #dplayer .dp-error-message {
+      position: absolute; <!-- 设置错误信息为绝对定位 -->
+      top: 50%; <!-- 设置错误信息垂直居中 -->
+      left: 50%; <!-- 设置错误信息水平居中 -->
+      transform: translate(-50%, -50%); <!-- 使用transform使错误信息完全居中 -->
+      color: #f44336; <!-- 设置错误信息的字体颜色为红色 -->
+      font-weight: 600; <!-- 设置错误信息的字体加粗 -->
     }
 
     #randomBtn {
-      width: 100%;
-      padding: 12px 0;
-      font-size: 1.1rem;
-      font-weight: 700;
-      background-color: #007aff;
-      color: white;
-      border: none;
-      border-radius: 18px;
-      cursor: pointer;
-      user-select: none;
-      box-shadow: 0 6px 14px rgba(0, 122, 255, 0.5);
-      transition: background-color 0.3s ease;
+      width: 100%; <!-- 设置按钮宽度为100% -->
+      padding: 12px 0; <!-- 设置按钮内边距 -->
+      font-size: 1.1rem; <!-- 设置按钮字体大小 -->
+      font-weight: 700; <!-- 设置按钮字体加粗 -->
+      background-color: #007aff; <!-- 设置按钮背景颜色 -->
+      color: white; <!-- 设置按钮字体颜色 -->
+      border: none; <!-- 去除按钮边框 -->
+      border-radius: 18px; <!-- 设置按钮圆角 -->
+      cursor: pointer; <!-- 设置鼠标样式为指针 -->
+      user-select: none; <!-- 禁止文本选中 -->
+      box-shadow: 0 6px 14px rgba(0, 122, 255, 0.5); <!-- 设置按钮阴影效果 -->
+      transition: background-color 0.3s ease; <!-- 设置背景颜色过渡效果 -->
     }
 
     #randomBtn:hover {
-      background-color: #005ecb;
+      background-color: #005ecb; <!-- 设置按钮悬停时背景颜色 -->
     }
 
     #randomBtn:active {
-      background-color: #004bb5;
+      background-color: #004bb5; <!-- 设置按钮点击时背景颜色 -->
     }
 
+    /* 响应式样式：当屏幕宽度小于等于480px时 */
     @media (max-width: 480px) {
       body {
-        padding: 15px;
+        padding: 15px; <!-- 设置视口小于480px时的内边距 -->
       }
 
       .container {
-        padding: 15px 18px 25px;
+        padding: 15px 18px 25px; <!-- 设置容器的内边距 -->
       }
 
       h2#title {
-        font-size: 1.2rem;
+        font-size: 1.2rem; <!-- 设置标题字体大小 -->
       }
 
       #sourceList button.source-btn,
       #episodeList button {
-        min-width: 70px;
-        font-size: 0.95rem;
+        min-width: 70px; <!-- 设置按钮最小宽度 -->
+        font-size: 0.95rem; <!-- 设置按钮字体大小 -->
       }
     }
   </style>
@@ -250,50 +274,52 @@
 
 <body>
   <div class="container">
-    <select id="apiSelect" title="选择API接口"></select>
-    <h2 id="title">加载中...</h2>
-    <img id="poster" src="" alt="视频封面" />
+    <select id="apiSelect" title="选择API接口"></select> <!-- API选择框 -->
+    <h2 id="title">加载中...</h2> <!-- 视频标题 -->
+    <img id="poster" src="" alt="视频封面" /> <!-- 视频封面图 -->
 
     <div id="info">
-      <p><strong>演员：</strong><span id="actor"></span></p>
-      <p><strong>导演：</strong><span id="director"></span></p>
-      <p><strong>类型：</strong><span id="type"></span></p>
-      <p><strong>发布时间：</strong><span id="pubdate"></span></p>
+      <p><strong>演员：</strong><span id="actor"></span></p> <!-- 演员 -->
+      <p><strong>导演：</strong><span id="director"></span></p> <!-- 导演 -->
+      <p><strong>类型：</strong><span id="type"></span></p> <!-- 类型 -->
+      <p><strong>发布时间：</strong><span id="pubdate"></span></p> <!-- 发布时间 -->
       <p><strong>简介：</strong></p>
       <div id="desc-wrapper">
-        <div id="description">暂无简介</div>
-        <button id="desc-toggle" onclick="toggleDescription()">展开</button>
+        <div id="description">暂无简介</div> <!-- 简介 -->
+        <button id="desc-toggle" onclick="toggleDescription()">展开</button> <!-- 展开/收起简介按钮 -->
       </div>
     </div>
 
     <div>
       <strong>集数列表：</strong>
-      <div id="episodeList"></div>
+      <br><strong>如果无法播放，请尝试其他视频线路</strong></br>
+      <div id="episodeList"></div> <!-- 集数列表 -->
     </div>
 
-    <div id="sourceList">播放线路：</div>
-    <video id="player" controls playsinline webkit-playsinline></video>
-    <button id="randomBtn" title="点击随机播放新视频">随机播放 🎲</button>
-    <button id="recentBtn" onclick="window.location.href='zuijin.html'">最近观看 🕘</button>
+    <div id="sourceList">播放线路：</div> <!-- 播放线路 -->
 
+    <!-- DPlayer播放器容器 -->
+    <div id="dplayer"></div>
+
+    <button id="randomBtn" title="点击随机播放新视频">随机播放 🎲</button> <!-- 随机播放按钮 -->
+    <button id="recentBtn" onclick="window.location.href='zuijin.html'">最近观看 🕘</button> <!-- 最近观看按钮 -->
   </div>
 
+  <!-- 引入DPlayer和Hls.js -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script> <!-- HLS.js库 -->
+  <script src="https://cdn.jsdelivr.net/npm/dplayer/dist/DPlayer.min.js"></script> <!-- DPlayer播放器 -->
+
   <script>
-    // 简介折叠功能
+    // 展开/收起简介
     function toggleDescription() {
       const wrapper = document.getElementById('desc-wrapper');
       const toggleBtn = document.getElementById('desc-toggle');
       const expanded = wrapper.classList.toggle('expanded');
       toggleBtn.innerText = expanded ? '收起' : '展开';
     }
-  </script>
 
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-
-  <script>
     const titleEl = document.getElementById('title');
     const posterEl = document.getElementById('poster');
-    const playerEl = document.getElementById('player');
     const sourceListEl = document.getElementById('sourceList');
     const randomBtn = document.getElementById('randomBtn');
     const apiSelect = document.getElementById('apiSelect');
@@ -305,318 +331,52 @@
     const descriptionEl = document.getElementById('description');
     const episodeListEl = document.getElementById('episodeList');
 
-    const ADD_INVALID_ID_API = 'api/add_invalid_id.php';
-    const GET_INVALID_IDS_API = 'api/get_invalid_ids.php';
+    const ADD_INVALID_ID_API = 'api/add_invalid_id.php'; <!-- 无效ID添加API -->
+    const GET_INVALID_IDS_API = 'api/get_invalid_ids.php'; <!-- 获取无效ID列表API -->
 
-    let currentApiUrl = '';
-    let currentApiName = '';
-    let parseBaseUrl = '';
-    let maxIdGlobal = 100000;
-    let invalidEntries = [];
-    let hls = null;
+    let currentApiUrl = ''; <!-- 当前API地址 -->
+    let currentApiName = ''; <!-- 当前API名称 -->
+    let parseBaseUrl = ''; <!-- 解析基础URL -->
+    let maxIdGlobal = 100000; <!-- 最大ID -->
+    let invalidEntries = []; <!-- 无效ID数组 -->
 
-    // 存储当前视频所有集数据，格式示例：
-    // [{ title: '第1集', playUrls: [{label: '线路1', url: 'xxx'}, {...}] }, {...}]
-    let currentEpisodes = [];
-    // 当前集索引
-    let currentEpisodeIndex = 0;
+    let dp = null; <!-- DPlayer实例 -->
 
+    let currentEpisodes = []; <!-- 当前视频集数列表 -->
+    let currentEpisodeIndex = 0; <!-- 当前集数索引 -->
+    let currentLineIndex = 0; <!-- 当前播放线路索引 -->
+
+    // 获取API列表
     async function fetchApiList() {
       try {
-        const res = await fetch('api/list_apis.php');
+        const res = await fetch('api/list_apis.php'); <!-- 获取API列表 -->
         const json = await res.json();
         parseBaseUrl = json.parse_url;
 
-        apiSelect.innerHTML = '';
+        apiSelect.innerHTML = ''; <!-- 清空API选择框 -->
         json.apis.forEach(api => {
           const opt = document.createElement('option');
           opt.value = api.api_url;
           opt.text = api.name;
-          apiSelect.appendChild(opt);
+          apiSelect.appendChild(opt); <!-- 填充API选择框 -->
         });
 
-        currentApiUrl = apiSelect.value;
-        currentApiName = apiSelect.options[apiSelect.selectedIndex].text;
+        currentApiUrl = apiSelect.value; <!-- 设置当前API地址 -->
+        currentApiName = apiSelect.options[apiSelect.selectedIndex].text; <!-- 设置当前API名称 -->
 
+        // 当选择API时重新加载数据
         apiSelect.onchange = () => {
           currentApiUrl = apiSelect.value;
           currentApiName = apiSelect.options[apiSelect.selectedIndex].text;
-          initMaxIdAndLoad();
+          initMaxId();
         };
-      } catch (e) {
-        console.error('获取API列表失败', e);
-        titleEl.innerText = '加载API列表失败';
-      }
-    }
 
-    async function getMaxId() {
-      try {
-        const url = `${currentApiUrl}&page=1&limit=1`;
-        const res = await fetch(`api/proxy.php?url=${encodeURIComponent(url)}`);
-        const json = await res.json();
-        if (json.code === 1 && json.total) return json.total;
-      } catch (e) {
-        console.error('获取最大ID失败', e);
-      }
-      return 100000;
-    }
-
-    function parsePlayUrls(rawStr) {
-      const sources = rawStr.split('$$$').filter(Boolean);
-      return sources.map(src => {
-        const parts = src.split('$');
-        return { label: parts[0], url: parts[1] };
-      }).filter(s => s.url);
-    }
-
-    // 解析 vod_play_url 字符串，得到所有集数组
-    // 集之间用 # 分割，单集内部多线路用 $$$ 分割，线路内用 $ 分割
-    function parseEpisodes(vodPlayUrl) {
-      const episodeStrs = vodPlayUrl.split('#').filter(s => s.trim());
-      return episodeStrs.map(epStr => {
-        const playUrls = parsePlayUrls(epStr);
-        const title = playUrls[0]?.label || '未知集';
-        return { title, playUrls };
-      });
-    }
-
-    function setActiveButton(btn, container) {
-      container.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-    }
-
-    function isInvalid(apiName, id) {
-      return invalidEntries.some(entry => entry.api_name === apiName && entry.id === id);
-    }
-
-    function getRandomValidId(maxId, apiName, maxAttempts = 20) {
-      for (let i = 0; i < maxAttempts; i++) {
-        const id = Math.floor(Math.random() * maxId) + 1;
-        if (!isInvalid(apiName, id)) return id;
-      }
-      return Math.floor(Math.random() * maxId) + 1;
-    }
-
-    async function addInvalidId(id, apiName) {
-      try {
-        await fetch(ADD_INVALID_ID_API, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, api_name: apiName }),
-        });
-      } catch (e) {
-        console.error('添加无效ID失败', e);
-      }
-    }
-
-    async function loadInvalidIds() {
-      try {
-        const res = await fetch(GET_INVALID_IDS_API);
-        const json = await res.json();
-        if (json.code === 1 && Array.isArray(json.invalid_entries)) {
-          invalidEntries = json.invalid_entries;
-        }
-      } catch (e) {
-        console.warn('加载无效ID失败', e);
-      }
-    }
-
-    // 播放指定线路
-    function playSourceUrl(url) {
-  if (hls) {
-    hls.destroy();
-    hls = null;
-  }
-  playerEl.pause();
-  playerEl.removeAttribute('src');
-  playerEl.load();
-
-  if (url.endsWith('.m3u8')) {
-    if (Hls.isSupported()) {
-      hls = new Hls();
-      hls.loadSource(url);
-      hls.attachMedia(playerEl);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        playerEl.play();
-      });
-    } else if (playerEl.canPlayType('application/vnd.apple.mpegurl')) {
-      playerEl.src = url;
-      playerEl.play();
-    } else {
-      alert('您的浏览器不支持播放此视频格式');
-    }
-  } else {
-    // 设置一个封面图或提示用户点击播放（非m3u8跳转）
-    playerEl.poster = '点击播放会跳转新页面';
-    playerEl.src = ''; // 不设置 src，防止内嵌播放
-
-    // 设置点击事件：跳转新页面
-    playerEl.onclick = () => {
-      window.open(url, '_blank');
-    };
-
-    alert("该视频将跳转至新页面播放");
-  }
-}
-
-
-    // 播放指定集的指定线路
-    function playEpisode(episodeIndex, lineIndex = 0) {
-      currentEpisodeIndex = episodeIndex;
-      const episode = currentEpisodes[episodeIndex];
-      if (!episode) return;
-
-      // 显示线路按钮
-      sourceListEl.innerHTML = '';
-      episode.playUrls.forEach((source, i) => {
-        const btn = document.createElement('button');
-        btn.className = 'source-btn';
-        btn.innerText = source.label || `线路${i + 1}`;
-        btn.onclick = () => {
-          setActiveButton(btn, sourceListEl);
-          playSourceUrl(source.url);
-        };
-        sourceListEl.appendChild(btn);
-      });
-
-      // 自动点击默认线路按钮
-      const firstBtn = sourceListEl.querySelector('button');
-      if (firstBtn) firstBtn.click();
-
-      // 集数列表高亮当前集
-      episodeListEl.querySelectorAll('button').forEach((btn, i) => {
-        btn.classList.toggle('active', i === episodeIndex);
-      });
-
-      // 更新视频标题为剧名 + 集数
-      titleEl.innerText = `${titleEl.dataset.vodName || '视频'} - ${episode.title}`;
-    }
-
-    async function loadVideoById(id) {
-      titleEl.innerText = '加载中...';
-      posterEl.src = '';
-      actorEl.innerText = '';
-      directorEl.innerText = '';
-      typeEl.innerText = '';
-      pubdateEl.innerText = '';
-      descriptionEl.innerText = '';
-      episodeListEl.innerHTML = '';
-      sourceListEl.innerHTML = '';
-
-      if (hls) {
-        hls.destroy();
-        hls = null;
-      }
-      playerEl.pause();
-      playerEl.removeAttribute('src');
-      playerEl.load();
-
-      try {
-        const url = currentApiUrl + '&ids=' + id;
-        const res = await fetch(`api/proxy.php?url=${encodeURIComponent(url)}`);
-        const json = await res.json();
-
-        if (json.code !== 1 || !json.list || json.list.length === 0) {
-          titleEl.innerText = '未找到视频，重试中...';
-          await addInvalidId(id, currentApiName);
-          setTimeout(() => loadVideoById(getRandomValidId(maxIdGlobal, currentApiName)), 1000);
-          return;
-        }
-
-        const data = json.list[0];
-        titleEl.dataset.vodName = data.vod_name || '无标题'; // 记录剧名
-        titleEl.innerText = data.vod_name || '无标题';
-        posterEl.src = data.vod_pic || '';
-
-        actorEl.innerText = data.vod_actor || '未知';
-        directorEl.innerText = data.vod_director || '未知';
-        typeEl.innerText = data.type_name || '未知';
-        pubdateEl.innerText = data.vod_pubdate || (data.vod_time ? new Date(data.vod_time).toLocaleDateString() : '未知');
-        descriptionEl.innerText = (data.vod_content || data.vod_blurb || '').replace(/<\/?[^>]+(>|$)/g, "").trim() || '暂无简介';
-
-        currentEpisodes = parseEpisodes(data.vod_play_url || '');
-
-        if (currentEpisodes.length === 0) {
-          titleEl.innerText = '无可用播放集';
-          return;
-        }
-
-        // 生成集数列表按钮
-        episodeListEl.innerHTML = '';
-        currentEpisodes.forEach((ep, i) => {
-          const btn = document.createElement('button');
-          btn.innerText = ep.title;
-          btn.onclick = () => playEpisode(i);
-          episodeListEl.appendChild(btn);
-        });
-
-        // 默认播放第1集第1条线路
-        playEpisode(0);
-
-        logVisitorInfo(currentApiName, data.vod_name || '无标题', data.vod_id);
+        initMaxId(); <!-- 初始化最大ID -->
       } catch (err) {
-        console.error(err);
-        titleEl.innerText = '正在为您努力加载中，请稍等...';
-        await addInvalidId(id, currentApiName);
-        setTimeout(() => loadVideoById(getRandomValidId(maxIdGlobal, currentApiName)), 1000);
-      }
-    }
-
-    async function initMaxIdAndLoad() {
-      maxIdGlobal = await getMaxId();
-      await loadInvalidIds();
-      loadVideoById(getRandomValidId(maxIdGlobal, currentApiName));
-    }
-
-    async function init() {
-      await fetchApiList();
-      await initMaxIdAndLoad();
-    }
-
-    window.onload = init;
-
-    randomBtn.onclick = () => loadVideoById(getRandomValidId(maxIdGlobal, currentApiName));
-
-    playerEl.onended = null;  // 取消播放结束事件
-
-    // 访客日志记录
-    async function logVisitorInfo(apiName, vodName, vodId) {
-      try {
-        const ipRes = await fetch('https://api.ipify.org?format=json');
-        const ipData = await ipRes.json();
-        const ip = ipData.ip;
-
-        let geo = '未知';
-        try {
-          const geoRes = await fetch(`https://ipapi.co/${ip}/json/`);
-          const geoJson = await geoRes.json();
-          geo = `${geoJson.city || ''}, ${geoJson.region || ''}, ${geoJson.country_name || ''}`;
-        } catch (e) {
-          console.warn('地理信息获取失败', e);
-        }
-
-        const ua = navigator.userAgent;
-        const device = /mobile/i.test(ua) ? '手机' : '电脑';
-        const time = new Date().toISOString();
-
-        await fetch('api/log_visit.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ip,
-            geo,
-            device,
-            time,
-            api_name: apiName,
-            vod_name: vodName,
-            vod_id: vodId
-          })
-        });
-      } catch (e) {
-        console.warn('访客信息记录失败', e);
+        console.error('Failed to fetch API list:', err);
       }
     }
   </script>
 </body>
-
 </html>
+
