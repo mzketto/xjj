@@ -30,13 +30,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $conn->set_charset('utf8mb4');
 
-    // 创建 config 表
+    // 创建 config 表（修改后的 SQL 语句，避免 TIMESTAMP 列冲突）
     $sql_config = "CREATE TABLE IF NOT EXISTS `config` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
         `key_name` VARCHAR(100) NOT NULL UNIQUE,
         `value` TEXT NOT NULL,
         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
     if (!$conn->query($sql_config)) {
         die("创建 config 表失败: " . $conn->error);
@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         `name` VARCHAR(255) NOT NULL,
         `api_url` TEXT NOT NULL,
         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
     if (!$conn->query($sql_apis)) {
         die("创建 video_apis 表失败: " . $conn->error);
