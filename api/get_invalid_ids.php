@@ -1,20 +1,20 @@
 <?php
 header('Content-Type: application/json');
-require '../config.php';
- // 连接数据库，变量 $conn
+
+$filename = __DIR__ . 'invalid_ids.txt';
 
 $invalidEntries = [];
-
-// 查询数据库所有无效日志
-$sql = "SELECT api_name, invalid_id FROM invalid_logs ORDER BY created_at DESC";
-$result = $conn->query($sql);
-
-if ($result) {
-    while ($row = $result->fetch_assoc()) {
-        $invalidEntries[] = [
-            'api_name' => $row['api_name'],
-            'id' => intval($row['invalid_id'])
-        ];
+if (file_exists($filename)) {
+    $lines = file($filename, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        // 格式：apiName id
+        $parts = explode(' ', $line, 2);
+        if (count($parts) === 2 && is_numeric($parts[1])) {
+            $invalidEntries[] = [
+                'api_name' => $parts[0],
+                'id' => intval($parts[1])
+            ];
+        }
     }
 }
 
