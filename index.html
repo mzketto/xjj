@@ -1,12 +1,10 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>随机多源视频播放 - Apple风格UI</title>
   <style>
-    /* ===== 基础样式与Apple风格布局 ===== */
     * {
       box-sizing: border-box;
     }
@@ -20,8 +18,28 @@
       padding: 20px;
       display: flex;
       justify-content: center;
+      align-items: flex-start; /* 防止跳中间 */
       min-height: 100vh;
     }
+    #recentBtn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  background-color: #f0f0f0;
+  color: #333;
+  border: none;
+  border-radius: 18px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+#recentBtn:hover {
+  background-color: #e4e4e4;
+}
+
 
     .container {
       background: #fff;
@@ -36,7 +54,6 @@
       margin: 0 10px;
     }
 
-    /* 下拉选择接口 */
     #apiSelect {
       width: 100%;
       margin-bottom: 12px;
@@ -47,7 +64,6 @@
       background: #f9f9f9;
     }
 
-    /* 视频标题样式 */
     h2#title {
       font-weight: 600;
       font-size: 1.4rem;
@@ -57,17 +73,92 @@
       word-break: break-word;
     }
 
-    /* 视频封面图样式 */
-    #poster {
+#poster {
+  width: 100%;
+  height: auto; /* 自动高度以保持宽高比 */
+  border-radius: 14px;
+  display: block;
+  margin-bottom: 18px;
+}
+    #info {
       width: 100%;
-      aspect-ratio: 16 / 9;
-      border-radius: 14px;
-      object-fit: cover;
-      margin-bottom: 18px;
-      transition: opacity 0.3s ease;
+      min-height: 100px;
     }
 
-    /* 播放源按钮容器 */
+    #info p {
+      margin: 4px 0;
+      font-size: 0.9rem;
+      color: #555;
+      word-break: break-word;
+    }
+
+    /* 简介区域折叠 */
+    #desc-wrapper {
+      position: relative;
+      max-width: 100%;
+      margin-top: 4px;
+    }
+
+    #description {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      font-size: 0.9rem;
+      color: #555;
+      transition: all 0.3s ease;
+      min-height: 2.5em;
+    }
+
+    #desc-wrapper.expanded #description {
+      -webkit-line-clamp: unset;
+      overflow: visible;
+    }
+
+    #desc-toggle {
+      background: none;
+      border: none;
+      color: #007aff;
+      font-size: 0.85rem;
+      cursor: pointer;
+      padding: 4px 0;
+      text-align: left;
+      user-select: none;
+    }
+
+    /* 集数列表美化 */
+    #episodeList {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      margin: 10px 0 20px;
+      width: 100%;
+    }
+
+    #episodeList button {
+      padding: 6px 12px;
+      border-radius: 12px;
+      border: 1.2px solid #ccc;
+      background: #f2f2f4;
+      font-size: 0.92rem;
+      color: #333;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    #episodeList button:hover {
+      background-color: #e4e4e9;
+      border-color: #aaa;
+    }
+
+    #episodeList button.active {
+      background-color: #007aff;
+      color: white;
+      border-color: #007aff;
+      box-shadow: 0 2px 6px rgba(0, 122, 255, 0.35);
+    }
+
     #sourceList {
       width: 100%;
       margin-bottom: 12px;
@@ -76,7 +167,6 @@
       gap: 8px 12px;
     }
 
-    /* 播放源按钮样式 */
     #sourceList button.source-btn {
       padding: 8px 15px;
       border-radius: 14px;
@@ -96,7 +186,6 @@
       border-color: #aaa;
     }
 
-    /* 当前播放源按钮高亮 */
     #sourceList button.active {
       background: #007aff;
       border-color: #007aff;
@@ -104,8 +193,7 @@
       box-shadow: 0 3px 8px rgba(0, 122, 255, 0.4);
     }
 
-    /* 播放器 video */
-    #player {
+    video#player {
       width: 100%;
       aspect-ratio: 16 / 9;
       border-radius: 14px;
@@ -115,7 +203,6 @@
       outline: none;
     }
 
-    /* 随机播放按钮 */
     #randomBtn {
       width: 100%;
       padding: 12px 0;
@@ -139,7 +226,6 @@
       background-color: #004bb5;
     }
 
-    /* 移动端适配 */
     @media (max-width: 480px) {
       body {
         padding: 15px;
@@ -153,7 +239,8 @@
         font-size: 1.2rem;
       }
 
-      #sourceList button.source-btn {
+      #sourceList button.source-btn,
+      #episodeList button {
         min-width: 70px;
         font-size: 0.95rem;
       }
@@ -166,12 +253,42 @@
     <select id="apiSelect" title="选择API接口"></select>
     <h2 id="title">加载中...</h2>
     <img id="poster" src="" alt="视频封面" />
-    <div id="sourceList">播放源：</div>
-    <div id="player"></div>
+
+    <div id="info">
+      <p><strong>演员：</strong><span id="actor"></span></p>
+      <p><strong>导演：</strong><span id="director"></span></p>
+      <p><strong>类型：</strong><span id="type"></span></p>
+      <p><strong>发布时间：</strong><span id="pubdate"></span></p>
+      <p><strong>简介：</strong></p>
+      <div id="desc-wrapper">
+        <div id="description">暂无简介</div>
+        <button id="desc-toggle" onclick="toggleDescription()">展开</button>
+      </div>
+    </div>
+
+    <div>
+      <strong>集数列表：</strong>
+      <div id="episodeList"></div>
+    </div>
+
+    <div id="sourceList">播放线路：</div>
+    <video id="player" controls playsinline webkit-playsinline></video>
     <button id="randomBtn" title="点击随机播放新视频">随机播放 🎲</button>
+    <button id="recentBtn" onclick="window.location.href='zuijin.html'">最近观看 🕘</button>
+
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/dplayer/dist/DPlayer.min.js"></script>
+  <script>
+    // 简介折叠功能
+    function toggleDescription() {
+      const wrapper = document.getElementById('desc-wrapper');
+      const toggleBtn = document.getElementById('desc-toggle');
+      const expanded = wrapper.classList.toggle('expanded');
+      toggleBtn.innerText = expanded ? '收起' : '展开';
+    }
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
   <script>
     const titleEl = document.getElementById('title');
@@ -181,6 +298,13 @@
     const randomBtn = document.getElementById('randomBtn');
     const apiSelect = document.getElementById('apiSelect');
 
+    const actorEl = document.getElementById('actor');
+    const directorEl = document.getElementById('director');
+    const typeEl = document.getElementById('type');
+    const pubdateEl = document.getElementById('pubdate');
+    const descriptionEl = document.getElementById('description');
+    const episodeListEl = document.getElementById('episodeList');
+
     const ADD_INVALID_ID_API = 'api/add_invalid_id.php';
     const GET_INVALID_IDS_API = 'api/get_invalid_ids.php';
 
@@ -189,7 +313,13 @@
     let parseBaseUrl = '';
     let maxIdGlobal = 100000;
     let invalidEntries = [];
-    let dp = null;  // DPlayer 实例
+    let hls = null;
+
+    // 存储当前视频所有集数据，格式示例：
+    // [{ title: '第1集', playUrls: [{label: '线路1', url: 'xxx'}, {...}] }, {...}]
+    let currentEpisodes = [];
+    // 当前集索引
+    let currentEpisodeIndex = 0;
 
     async function fetchApiList() {
       try {
@@ -239,8 +369,19 @@
       }).filter(s => s.url);
     }
 
-    function setActiveButton(btn) {
-      document.querySelectorAll('.source-btn').forEach(b => b.classList.remove('active'));
+    // 解析 vod_play_url 字符串，得到所有集数组
+    // 集之间用 # 分割，单集内部多线路用 $$$ 分割，线路内用 $ 分割
+    function parseEpisodes(vodPlayUrl) {
+      const episodeStrs = vodPlayUrl.split('#').filter(s => s.trim());
+      return episodeStrs.map(epStr => {
+        const playUrls = parsePlayUrls(epStr);
+        const title = playUrls[0]?.label || '未知集';
+        return { title, playUrls };
+      });
+    }
+
+    function setActiveButton(btn, container) {
+      container.querySelectorAll('button').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
     }
 
@@ -280,15 +421,95 @@
       }
     }
 
+    // 播放指定线路
+    function playSourceUrl(url) {
+  if (hls) {
+    hls.destroy();
+    hls = null;
+  }
+  playerEl.pause();
+  playerEl.removeAttribute('src');
+  playerEl.load();
+
+  if (url.endsWith('.m3u8')) {
+    if (Hls.isSupported()) {
+      hls = new Hls();
+      hls.loadSource(url);
+      hls.attachMedia(playerEl);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        playerEl.play();
+      });
+    } else if (playerEl.canPlayType('application/vnd.apple.mpegurl')) {
+      playerEl.src = url;
+      playerEl.play();
+    } else {
+      alert('您的浏览器不支持播放此视频格式');
+    }
+  } else {
+    // 设置一个封面图或提示用户点击播放（非m3u8跳转）
+    playerEl.poster = '点击播放会跳转新页面';
+    playerEl.src = ''; // 不设置 src，防止内嵌播放
+
+    // 设置点击事件：跳转新页面
+    playerEl.onclick = () => {
+      window.open(url, '_blank');
+    };
+
+    alert("该视频将跳转至新页面播放");
+  }
+}
+
+
+    // 播放指定集的指定线路
+    function playEpisode(episodeIndex, lineIndex = 0) {
+      currentEpisodeIndex = episodeIndex;
+      const episode = currentEpisodes[episodeIndex];
+      if (!episode) return;
+
+      // 显示线路按钮
+      sourceListEl.innerHTML = '';
+      episode.playUrls.forEach((source, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'source-btn';
+        btn.innerText = source.label || `线路${i + 1}`;
+        btn.onclick = () => {
+          setActiveButton(btn, sourceListEl);
+          playSourceUrl(source.url);
+        };
+        sourceListEl.appendChild(btn);
+      });
+
+      // 自动点击默认线路按钮
+      const firstBtn = sourceListEl.querySelector('button');
+      if (firstBtn) firstBtn.click();
+
+      // 集数列表高亮当前集
+      episodeListEl.querySelectorAll('button').forEach((btn, i) => {
+        btn.classList.toggle('active', i === episodeIndex);
+      });
+
+      // 更新视频标题为剧名 + 集数
+      titleEl.innerText = `${titleEl.dataset.vodName || '视频'} - ${episode.title}`;
+    }
+
     async function loadVideoById(id) {
       titleEl.innerText = '加载中...';
       posterEl.src = '';
+      actorEl.innerText = '';
+      directorEl.innerText = '';
+      typeEl.innerText = '';
+      pubdateEl.innerText = '';
+      descriptionEl.innerText = '';
+      episodeListEl.innerHTML = '';
       sourceListEl.innerHTML = '';
 
-      if (dp) {
-        dp.destroy();
-        dp = null;
+      if (hls) {
+        hls.destroy();
+        hls = null;
       }
+      playerEl.pause();
+      playerEl.removeAttribute('src');
+      playerEl.load();
 
       try {
         const url = currentApiUrl + '&ids=' + id;
@@ -303,54 +524,42 @@
         }
 
         const data = json.list[0];
+        titleEl.dataset.vodName = data.vod_name || '无标题'; // 记录剧名
         titleEl.innerText = data.vod_name || '无标题';
         posterEl.src = data.vod_pic || '';
-        logVisitorInfo(currentApiName, data.vod_name || '无标题');
 
-        const sources = parsePlayUrls(data.vod_play_url || '');
-        if (sources.length === 0) {
-          titleEl.innerText = '无可用播放源';
+        actorEl.innerText = data.vod_actor || '未知';
+        directorEl.innerText = data.vod_director || '未知';
+        typeEl.innerText = data.type_name || '未知';
+        pubdateEl.innerText = data.vod_pubdate || (data.vod_time ? new Date(data.vod_time).toLocaleDateString() : '未知');
+        descriptionEl.innerText = (data.vod_content || data.vod_blurb || '').replace(/<\/?[^>]+(>|$)/g, "").trim() || '暂无简介';
+
+        currentEpisodes = parseEpisodes(data.vod_play_url || '');
+
+        if (currentEpisodes.length === 0) {
+          titleEl.innerText = '无可用播放集';
           return;
         }
 
-        sourceListEl.innerHTML = '';
-        sources.forEach((source, i) => {
+        // 生成集数列表按钮
+        episodeListEl.innerHTML = '';
+        currentEpisodes.forEach((ep, i) => {
           const btn = document.createElement('button');
-          btn.className = 'source-btn';
-          btn.innerText = source.label || `播放源${i + 1}`;
-          btn.onclick = () => {
-            setActiveButton(btn);
-            playSourceUrl(source.url);
-          };
-          sourceListEl.appendChild(btn);
+          btn.innerText = ep.title;
+          btn.onclick = () => playEpisode(i);
+          episodeListEl.appendChild(btn);
         });
 
-        const firstBtn = sourceListEl.querySelector('button');
-        if (firstBtn) firstBtn.click();
+        // 默认播放第1集第1条线路
+        playEpisode(0);
 
+        logVisitorInfo(currentApiName, data.vod_name || '无标题', data.vod_id);
       } catch (err) {
         console.error(err);
         titleEl.innerText = '正在为您努力加载中，请稍等...';
         await addInvalidId(id, currentApiName);
         setTimeout(() => loadVideoById(getRandomValidId(maxIdGlobal, currentApiName)), 1000);
       }
-    }
-
-    function playSourceUrl(url) {
-      if (dp) {
-        dp.destroy();
-        dp = null;
-      }
-
-      dp = new DPlayer({
-        container: playerEl,
-        video: {
-          url: url,
-          pic: posterEl.src,
-          type: url.endsWith('.m3u8') ? 'hls' : 'mp4', // 自动判断类型
-        },
-      });
-      dp.play();
     }
 
     async function initMaxIdAndLoad() {
@@ -368,47 +577,46 @@
 
     randomBtn.onclick = () => loadVideoById(getRandomValidId(maxIdGlobal, currentApiName));
 
-    playerEl.onended = () => {
-      loadVideoById(getRandomValidId(maxIdGlobal, currentApiName));
-    };
-  </script>
-  <script>
-  async function logVisitorInfo(apiName, vodName) {
-    try {
-      const ipRes = await fetch('https://api.ipify.org?format=json');
-      const ipData = await ipRes.json();
-      const ip = ipData.ip;
+    playerEl.onended = null;  // 取消播放结束事件
 
-      let geo = '未知';
+    // 访客日志记录
+    async function logVisitorInfo(apiName, vodName, vodId) {
       try {
-        const geoRes = await fetch(`https://ipapi.co/${ip}/json/`);
-        const geoJson = await geoRes.json();
-        geo = `${geoJson.city || ''}, ${geoJson.region || ''}, ${geoJson.country_name || ''}`;
+        const ipRes = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipRes.json();
+        const ip = ipData.ip;
+
+        let geo = '未知';
+        try {
+          const geoRes = await fetch(`https://ipapi.co/${ip}/json/`);
+          const geoJson = await geoRes.json();
+          geo = `${geoJson.city || ''}, ${geoJson.region || ''}, ${geoJson.country_name || ''}`;
+        } catch (e) {
+          console.warn('地理信息获取失败', e);
+        }
+
+        const ua = navigator.userAgent;
+        const device = /mobile/i.test(ua) ? '手机' : '电脑';
+        const time = new Date().toISOString();
+
+        await fetch('api/log_visit.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ip,
+            geo,
+            device,
+            time,
+            api_name: apiName,
+            vod_name: vodName,
+            vod_id: vodId
+          })
+        });
       } catch (e) {
-        console.warn('地理信息获取失败', e);
+        console.warn('访客信息记录失败', e);
       }
-
-      const ua = navigator.userAgent;
-      const device = /mobile/i.test(ua) ? '手机' : '电脑';
-      const time = new Date().toISOString();
-
-      await fetch('api/log_visit.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ip,
-          geo,
-          device,
-          time,
-          api_name: apiName,
-          vod_name: vodName
-        })
-      });
-    } catch (e) {
-      console.warn('访客信息记录失败', e);
     }
-  }
-</script>
+  </script>
 </body>
 
 </html>
