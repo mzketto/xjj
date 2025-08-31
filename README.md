@@ -44,8 +44,8 @@ https://你的域名/admin
 - ✅ 正确格式：`https://xxx.com/`
 - ❌ 错误示例：`https://xxx.com/api.php/provide/vod/at/json/?ac=detail`
 
-5. 添加 M3U8 解析地址（例如公共解析接口）
+5. 添加 M3U8 解析地址（例如公共解析接口  https://api.nxvav.cn/api/m3u8/?url=    ）
 
-6. 完成配置，开始播放吧！
+8. 完成配置，开始播放吧！
 
 ---
